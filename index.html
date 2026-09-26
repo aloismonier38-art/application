@@ -4,15 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TeamHub — Application équipes</title>
-  <link rel="stylesheet" href="styles.css?v=15">
+  <link rel="stylesheet" href="styles.css?v=16">
 <style>
 .auth-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:20px;background:var(--cream)}
 .auth-gate[hidden]{display:none}#app[hidden]{display:none}
 .auth-card{width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px;box-shadow:0 24px 70px rgba(0,0,0,.12);color:var(--green)}
 .auth-brand{padding:0 0 24px}.auth-card h2{margin:0 0 6px;font-size:24px}.auth-card form{display:grid;gap:13px;margin-top:20px}.auth-card label{display:grid;gap:6px;font-size:12px;font-weight:650;color:#53645c}.auth-card input{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px;background:#fff;color:var(--green);font:inherit}.auth-switch,.auth-logout{border:0;background:transparent;color:var(--green);cursor:pointer;font-size:12px;margin-top:14px;text-decoration:underline}.auth-logout{display:block;margin-left:auto;margin-right:auto}body.dark .auth-gate{background:#171b19}body.dark .auth-card{background:#202622;border-color:#303733;color:#e8eee9}body.dark .auth-card label{color:#b8c5bf}body.dark .auth-card input{background:#181d1a;border-color:#3a433e;color:#e8eee9}
+
+.signup-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px}.signup-modal[hidden]{display:none}.signup-backdrop{position:absolute;inset:0;background:rgba(23,66,53,.58);backdrop-filter:blur(4px)}.signup-dialog{position:relative;z-index:1;width:min(440px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 28px 90px rgba(0,0,0,.28);color:var(--green)}.signup-dialog form{display:grid;gap:13px;margin-top:20px}.signup-dialog label{display:grid;gap:6px;font-size:12px;font-weight:650;color:#53645c}.signup-dialog input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:11px;background:#fff;color:var(--green);font:inherit}.signup-close{position:absolute;right:16px;top:12px;border:0;background:transparent;font-size:28px;line-height:1;color:#748078;cursor:pointer}.signup-dialog h2{margin:0 0 6px;font-size:24px}body.dark .signup-backdrop{background:rgba(0,0,0,.7)}body.dark .signup-dialog{background:#202622;border-color:#303733;color:#e8eee9}body.dark .signup-dialog label{color:#b8c5bf}body.dark .signup-dialog input{background:#181d1a;border-color:#3a433e;color:#e8eee9}
 </style>\n</head>
 <body>
-  <div id="authGate" class="auth-gate"><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div><h2 id="authTitle">Connexion</h2><p id="authMessage" class="muted">Connectez-vous pour accéder à votre équipe.</p><form id="authForm"><label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label><label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label><label id="authNameWrap" hidden>Nom complet<input id="authName" type="text" autocomplete="name" placeholder="Aloïs Monier"></label><button class="btn" id="authSubmit">Se connecter</button></form><button class="auth-switch" id="authSwitch" type="button">Créer mon compte</button><div class="auth-build" style="text-align:center;margin-top:10px;font-size:10px;color:#748078">TeamHub v15</div><button class="auth-logout" id="authLogout" type="button" hidden>Se déconnecter</button></div></div>
+  <div id="authGate" class="auth-gate"><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div><h2 id="authTitle">Connexion</h2><p id="authMessage" class="muted">Connectez-vous pour accéder à votre équipe.</p><form id="authForm"><label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label><label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label><button class="btn" id="authSubmit">Se connecter</button></form><button class="auth-switch" id="authSwitch" type="button">Créer mon compte</button><div class="auth-build" style="text-align:center;margin-top:10px;font-size:10px;color:#748078">TeamHub v15</div><button class="auth-logout" id="authLogout" type="button" hidden>Se déconnecter</button></div></div>
+<div id="signupModal" class="signup-modal" hidden aria-hidden="true">
+  <div class="signup-backdrop" data-signup-close></div>
+  <div class="signup-dialog" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
+    <button class="signup-close" id="signupClose" type="button" aria-label="Fermer">×</button>
+    <div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div>
+    <h2 id="signupTitle">Créer mon compte</h2>
+    <p id="signupMessage" class="muted">Créez votre compte pour rejoindre l’équipe.</p>
+    <form id="signupForm">
+      <label>Nom complet<input id="signupName" type="text" required autocomplete="name" placeholder="Aloïs Monier"></label>
+      <label>Email professionnel<input id="signupEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label>
+      <label>Mot de passe<input id="signupPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="6 caractères minimum"></label>
+      <label>Confirmer le mot de passe<input id="signupPasswordConfirm" type="password" required minlength="6" autocomplete="new-password" placeholder="Retapez votre mot de passe"></label>
+      <button class="btn" id="signupSubmit" type="submit">Créer mon compte</button>
+    </form>
+    <button class="auth-switch" id="signupCancel" type="button">Retour à la connexion</button>
+  </div>
+</div>
   <div id="app" hidden>
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div>
@@ -43,7 +62,7 @@
 </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="supabase-config.js?v=15"></script>
-  <script src="auth.js?v=15"></script>
+  <script src="supabase-config.js?v=16"></script>
+  <script src="auth.js?v=16"></script>
 </body>
 </html>
