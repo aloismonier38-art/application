@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TeamHub — Application équipes</title>
-  <link rel="stylesheet" href="styles.css?v=21">
+  <link rel="stylesheet" href="styles.css?v=22">
 <style>
 .auth-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:20px;background:var(--cream)}
 .auth-gate[hidden]{display:none}#app[hidden]{display:none}
@@ -15,7 +15,7 @@
 </style>
 </head>
 <body>
-  <div id="authGate" class="auth-gate"><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div><h2 id="authTitle">Connexion</h2><p id="authMessage" class="muted">Connectez-vous pour accéder à votre équipe.</p><form id="authForm"><label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label><label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label><label id="authNameWrap" hidden>Nom complet<input id="authName" type="text" autocomplete="name" placeholder="Aloïs Monier"></label><button class="btn" id="authSubmit">Se connecter</button></form><button class="auth-switch" id="authSwitch" type="button">Créer mon compte</button><div class="auth-build" style="text-align:center;margin-top:10px;font-size:10px;color:#748078">TeamHub v21</div><button class="auth-logout" id="authLogout" type="button" hidden>Se déconnecter</button></div></div>
+  <div id="authGate" class="auth-gate"><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div><h2 id="authTitle">Connexion</h2><p id="authMessage" class="muted">Connectez-vous pour accéder à votre équipe.</p><form id="authForm"><label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label><label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label><label<button class="btn" id="authSubmit">Se connecter</button></form><button class="auth-switch" id="authSwitch" type="button">Créer mon compte</button><div class="auth-build" style="text-align:center;margin-top:10px;font-size:10px;color:#748078">TeamHub v22</div><button class="auth-logout" id="authLogout" type="button" hidden>Se déconnecter</button></div></div>
 <div id="signupModal" class="signup-modal" hidden aria-hidden="true">
   <div class="signup-backdrop" data-signup-close></div>
   <div class="signup-dialog" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
@@ -63,7 +63,7 @@
 </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="supabase-config.js?v=21"></script>
-  <script src="auth.js?v=21"></script>
+  <script src="supabase-config.js?v=22"></script>
+  <script src="auth.js?v=22"></script>
 </body>
 </html>
