@@ -107,7 +107,7 @@ $("#signupForm")?.addEventListener("submit",handleSignup);
 async function loadProfile(){
   const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",(await supabase.auth.getUser()).data.user.id).single();
   if(error)throw error;
-  state.profile=profile;state.role=profile.role;
+  state.profile={...profile,email:user.email||""};state.role=profile.role;
 }
 async function loadData(){
   const est=state.profile?.establishment_id;
@@ -173,7 +173,7 @@ function renderSettings(){
   '<form id="profileSettingsForm" class="settings-form"><label>Nom affiché<input name="full_name" required value="'+esc(p.full_name||"")+'"></label>'+
   '<label>Email<input value="'+esc(email||"Non disponible")+'" disabled></label>'+
   '<label>Rôle<input value="'+esc(roleText(state.role))+'" disabled></label>'+
-  '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section>'+
+  '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
   '<section class="card settings-card"><div class="stat-label">Application</div><h3>Préférences</h3>'+
   '<div class="settings-row"><div><strong>Mode sombre</strong><div class="muted">Adapter l’affichage à vos préférences.</div></div><button type="button" class="btn-secondary" data-settings-theme>Changer</button></div>'+
   '<div class="settings-row"><div><strong>Version</strong><div class="muted">CosyHub 1.1.42</div></div></div></section>'+
@@ -279,7 +279,7 @@ document.addEventListener("click",async e=>{
   }
 });
 document.addEventListener("submit",async e=>{
- if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=String(fd.get("full_name")||"").trim(); if(!name)return; const {error}=await supabase.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",state.profile.id); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id!=="modalForm")return;
+ if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=String(fd.get("full_name")||"").trim(); if(!name)return; const {error}=await supabase.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",state.profile.id); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
  e.preventDefault();
  const f=e.target,fd=new FormData(f),type=f.dataset.type,est=state.profile.establishment_id,user=(await supabase.auth.getUser()).data.user;
  try{
