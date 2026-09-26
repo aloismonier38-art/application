@@ -95,7 +95,7 @@ function renderDashboard(){
 
 function renderDocuments(){
  content.innerHTML='<div class="section-title"><h2>Fiches techniques</h2>'+(can("document")?'<button class="btn" data-modal="document">+ Ajouter</button>':"")+'</div>'+
- '<div class="list">'+(data.documents.length?data.documents.map(d=>'<div class="row doc-preview"><div class="pdf-icon">PDF</div><div><strong>'+esc(d.title)+'</strong><div class="muted">Version '+esc(d.version)+' · '+esc(d.file_name)+'</div></div><button class="preview-btn" data-preview="'+esc(d.id)+'">Prévisualiser</button></div>').join(""):'<div class="empty">Aucune fiche technique.</div>')+'</div>';
+ '<div class="list">'+(data.documents.length?data.documents.map(d=>'<div class="row doc-preview"><div class="pdf-icon">PDF</div><div class="doc-info"><strong>'+esc(d.title)+'</strong><div class="muted">Version '+esc(d.version)+' · '+esc(d.file_name)+'</div></div><button class="preview-btn" data-preview="'+esc(d.id)+'">Prévisualiser</button>'+(can("document")?'<div class="doc-menu-wrap"><button class="doc-menu-btn" type="button" data-doc-menu="'+esc(d.id)+'" aria-label="Options">⋯</button><div class="doc-menu" data-menu-for="'+esc(d.id)+'" hidden><button type="button" data-doc-edit="'+esc(d.id)+'">Modifier</button><button type="button" class="danger" data-doc-delete="'+esc(d.id)+'">Supprimer</button></div></div>':"")+'</div>').join(""):'<div class="empty">Aucune fiche technique.</div>')+'</div>';
 }
 
 function renderTasks(){
@@ -134,12 +134,23 @@ async function openPreview(id){
  if(error){alert("Impossible d’ouvrir le document : "+error.message);return;}
  window.open(url.signedUrl,"_blank","noopener");
 }
+async function deleteDocument(id){
+ const d=data.documents.find(x=>x.id===id);if(!d)return;
+ if(!can("document"))return;
+ if(!confirm('Supprimer la fiche « '+d.title+' » ?\n\nCette action est définitive.'))return;
+ const {error}=await supabase.from("documents").delete().eq("id",id);
+ if(error){alert("Impossible de supprimer la fiche : "+error.message);return;}
+ const {error:storageError}=await supabase.storage.from("team-documents").remove([d.storage_path]);
+ if(storageError)console.error("Storage delete error:",storageError);
+ await loadData();render();
+}
 async function openModal(type){
  closeModal();
  const names={task:"Nouvelle tâche",document:"Ajouter une fiche technique",request:"Nouveau besoin / intervention",report:"Nouveau rapport hebdomadaire"};
  let form="";
  if(type==="task")form='<label>Titre<input name="title" required placeholder="Ex. Contrôler les températures"></label><div class="form-grid"><label>Attribuer à<select name="assignee" id="assigneeSelect"></select></label><label>Date<input name="due" type="date" required></label></div><div class="form-grid"><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label><label>Récurrence<select name="repeat"><option>Aucune</option><option>Tous les jours</option><option>Chaque semaine</option><option>Chaque mois</option></select></label></div><label>Note<textarea name="note"></textarea></label>';
  if(type==="document")form='<label>Fichier<input name="file" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required></label><label>Nom<input name="name" required placeholder="Ex. Procédure ouverture"></label><label>Catégorie<select name="category"><option value="technical">Fiche technique</option><option value="procedure">Procédure</option><option value="haccp">Hygiène / HACCP</option><option value="other">Autre</option></select></label>';
+ if(type==="document-edit"){const d=data.documents.find(x=>x.id===window.__editDocumentId)||{};form='<label>Nom<input name="name" required value="'+esc(d.title||"")+'"></label><label>Catégorie<select name="category"><option value="technical" '+(d.category==="technical"?"selected":"")+'>Fiche technique</option><option value="procedure" '+(d.category==="procedure"?"selected":"")+'>Procédure</option><option value="haccp" '+(d.category==="haccp"?"selected":"")+'>Hygiène / HACCP</option><option value="other" '+(d.category==="other"?"selected":"")+'>Autre</option></select></label>';
  if(type==="request")form='<label>Objet<input name="title" required></label><div class="form-grid"><label>Type<select name="kind"><option>Maintenance</option><option>Matériel</option><option>Informatique</option><option>Fournisseur</option></select></label><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label></div><label>Description<textarea name="description" required></textarea><label>Pièce jointe<input name="file" type="file"></label>';
  if(type==="report")form='<label>Semaine<input name="week" required placeholder="S39"></label><div class="form-grid"><label>CA TTC<input name="revenue" type="number" step=".01"></label><label>Clients<input name="clients" type="number"></label></div><div class="form-grid"><label>Ticket moyen<input name="ticket" type="number" step=".01"></label><label>Note<input name="rating" type="number" step=".01"></label></div><label>Commentaires<textarea name="comments"></textarea>';
  const m=document.createElement("div");m.id="appModal";m.className="modal-backdrop";
@@ -158,6 +169,9 @@ document.addEventListener("click",async e=>{
  const modal=e.target.closest("[data-modal]");if(modal){openModal(modal.dataset.modal);return;}
  const filter=e.target.closest("[data-filter]");if(filter){state.taskFilter=filter.dataset.filter;renderTasks();return;}
  const preview=e.target.closest("[data-preview]");if(preview){await openPreview(preview.dataset.preview);return;}
+ const menu=e.target.closest("[data-doc-menu]");if(menu){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);const box=document.querySelector('[data-menu-for="'+menu.dataset.docMenu+'"]');if(box)box.hidden=false;return;}
+ const edit=e.target.closest("[data-doc-edit]");if(edit){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);window.__editDocumentId=edit.dataset.docEdit;openModal("document-edit");return;}
+ const del=e.target.closest("[data-doc-delete]");if(del){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);await deleteDocument(del.dataset.docDelete);return;}
 });
 document.addEventListener("change",async e=>{
  if(e.target.matches('[data-action="toggle-task"]')){
@@ -182,6 +196,10 @@ document.addEventListener("submit",async e=>{
      if(up.error)throw up.error;
      const {error}=await supabase.from("documents").insert({id,establishment_id:est,title:fd.get("name"),category:fd.get("category"),storage_path:path,file_name:file.name,uploaded_by:user.id});
      if(error)throw error;state.view="documents";
+   }
+   if(type==="document-edit"){
+     const id=window.__editDocumentId;const {error}=await supabase.from("documents").update({title:fd.get("name"),category:fd.get("category"),updated_at:new Date().toISOString()}).eq("id",id);
+     if(error)throw error;window.__editDocumentId=null;state.view="documents";
    }
    if(type==="request"){
      const {error}=await supabase.from("requests").insert({establishment_id:est,title:fd.get("title"),description:fd.get("description"),request_type:fd.get("kind"),priority:priorityValue(fd.get("priority")),created_by:user.id});
