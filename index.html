@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>CosyHub — Gestion des équipes</title>
-  <link rel="stylesheet" href="styles.css?v=42">
+  <link rel="stylesheet" href="styles.css?v=43">
 <style>
 .auth-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:20px;background:var(--cream)}
 .auth-gate[hidden]{display:none}#app[hidden]{display:none}
@@ -15,7 +15,7 @@
 </style>
 </head>
 <body>
-  <div id="appVersion" class="app-version">CosyHub 1.1.42</div>
+  <div id="appVersion" class="app-version">CosyHub 1.1.43</div>
   <div id="authGate" class="auth-gate">
   <div class="auth-shell">
     <div class="auth-brand-top"><div><strong>CosyHub</strong><small>Gestion des équipes</small></div></div>
@@ -63,7 +63,7 @@
     <main class="main">
       <header class="topbar">
         <div><span class="eyebrow">Équipe</span><h1 id="pageTitle">Tableau de bord</h1></div>
-        <div class="top-actions"><span class="status-dot"></span><span>Connecté</span><button id="themeToggle" class="theme-toggle" aria-label="Activer le mode sombre"><span class="theme-switch"></span><span class="theme-label">Sombre</span></button><button id="roleToggle" class="role-toggle" data-view="settings" aria-label="Ouvrir les paramètres">Paramètres</button></div>
+        <div class="top-actions"><span class="status-dot"></span><span>Connecté</span><button id="themeToggle" class="theme-toggle" aria-label="Activer le mode sombre"><span class="theme-switch"></span><span class="theme-label">Sombre</span></button><button id="roleToggle" class="role-toggle settings-button" data-view="settings" aria-label="Ouvrir les paramètres"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="m19.4 15 .1.1a2 2 0 0 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4v.2a2 2 0 0 1-4 0v-.2a2 2 0 0 0-3.4-1.4l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1A2 2 0 0 0 4.4 11H4.2a2 2 0 0 1 0-4h.2A2 2 0 0 0 5.8 3.6l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1A2 2 0 0 0 12 4.2V4a2 2 0 0 1 4 0v.2a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1A2 2 0 0 0 20 11h.2a2 2 0 0 1 0 4H20a2 2 0 0 0-.6 0Z"/></svg><span>Paramètres</span></button></div>
       </header>
       <section id="content"></section>
     </main>
@@ -76,8 +76,8 @@
 </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="supabase-config.js?v=42"></script>
-  <script src="app.js?v=42"></script>
+  <script src="supabase-config.js?v=43"></script>
+  <script src="app.js?v=43"></script>
   
 </body>
 </html>
