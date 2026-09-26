@@ -45,5 +45,16 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=1"></script>
   <script src="app.js?v=6"></script>
+  <script>
+    setTimeout(function(){
+      var content=document.getElementById("content");
+      var gate=document.getElementById("authGate");
+      if(content && !content.innerHTML.trim() && gate && gate.hidden){
+        gate.hidden=false;
+        var msg=document.getElementById("authMessage");
+        if(msg) msg.textContent="Le chargement de TeamHub a rencontré un problème. Rechargez la page avec ?v=7.";
+      }
+    },5000);
+  </script>
 </body>
 </html>
