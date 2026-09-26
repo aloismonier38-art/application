@@ -213,7 +213,7 @@ document.addEventListener("submit",async e=>{
  }catch(err){alert(err.message||"Impossible d’enregistrer.");}
 });
 
-roleToggle.addEventListener("click",()=>authLogout.click());
+roleToggle?.addEventListener("click",()=>authLogout?.click());
 const savedTheme=localStorage.getItem("teamhub-theme");if(savedTheme==="dark")document.body.classList.add("dark");
 function updateThemeButton(){const dark=document.body.classList.contains("dark");themeToggle?.setAttribute("aria-pressed",String(dark));themeToggle?.setAttribute("aria-label",dark?"Désactiver le mode sombre":"Activer le mode sombre");}
 themeToggle?.addEventListener("click",()=>{const dark=document.body.classList.toggle("dark");localStorage.setItem("teamhub-theme",dark?"dark":"light");updateThemeButton();});
