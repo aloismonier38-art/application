@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TeamHub — Application équipes</title>
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
 <style>
 .auth-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:20px;background:var(--cream)}
 .auth-gate[hidden]{display:none}#app[hidden]{display:none}
@@ -12,7 +12,7 @@
 .auth-brand{padding:0 0 24px}.auth-card h2{margin:0 0 6px;font-size:24px}.auth-card form{display:grid;gap:13px;margin-top:20px}.auth-card label{display:grid;gap:6px;font-size:12px;font-weight:650;color:#53645c}.auth-card input{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px;background:#fff;color:var(--green);font:inherit}.auth-switch,.auth-logout{border:0;background:transparent;color:var(--green);cursor:pointer;font-size:12px;margin-top:14px;text-decoration:underline}.auth-logout{display:block;margin-left:auto;margin-right:auto}body.dark .auth-gate{background:#171b19}body.dark .auth-card{background:#202622;border-color:#303733;color:#e8eee9}body.dark .auth-card label{color:#b8c5bf}body.dark .auth-card input{background:#181d1a;border-color:#3a433e;color:#e8eee9}
 </style>\n</head>
 <body>
-  <div id="authGate" class="auth-gate"><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div><h2 id="authTitle">Connexion</h2><p id="authMessage" class="muted">Connectez-vous pour accéder à votre équipe.</p><form id="authForm"><label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label><label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label><label id="authNameWrap" hidden>Nom complet<input id="authName" type="text" autocomplete="name" placeholder="Aloïs Monier"></label><button class="btn" id="authSubmit">Se connecter</button></form><button class="auth-switch" id="authSwitch" type="button">Créer mon compte</button><button class="auth-logout" id="authLogout" type="button" hidden>Se déconnecter</button></div></div>
+  <div id="authGate" class="auth-gate"><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div><h2 id="authTitle">Connexion</h2><p id="authMessage" class="muted">Connectez-vous pour accéder à votre équipe.</p><form id="authForm"><label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label><label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label><label id="authNameWrap" hidden>Nom complet<input id="authName" type="text" autocomplete="name" placeholder="Aloïs Monier"></label><button class="btn" id="authSubmit">Se connecter</button></form><button class="auth-switch" id="authSwitch" type="button">Créer mon compte</button><div class="auth-build" style="text-align:center;margin-top:10px;font-size:10px;color:#748078">TeamHub v15</div><button class="auth-logout" id="authLogout" type="button" hidden>Se déconnecter</button></div></div>
   <div id="app" hidden>
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div>
@@ -43,7 +43,7 @@
 </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="supabase-config.js?v=14"></script>
-  <script src="auth.js?v=14"></script>
+  <script src="supabase-config.js?v=15"></script>
+  <script src="auth.js?v=15"></script>
 </body>
 </html>
