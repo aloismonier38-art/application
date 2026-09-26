@@ -151,3 +151,48 @@ body.dark .theme-switch::after{left:17px}
   .theme-toggle{padding:5px 6px}
   .theme-toggle .theme-label{display:none}
 }
+
+/* Correction contraste et sidebar du mode sombre */
+body.dark .sidebar{
+  background:#12382d;
+  color:#f1f6f3;
+}
+body.dark .sidebar .brand small,
+body.dark .sidebar .user-card small{
+  color:#b8cbc2;
+}
+body.dark .sidebar .nav-item{
+  color:#dce8e2;
+}
+body.dark .sidebar .nav-item:hover,
+body.dark .sidebar .nav-item.active{
+  background:#1d493c;
+  color:#fff;
+}
+body.dark .sidebar .nav-item.active .nav-icon{
+  color:#e38f9c;
+}
+body.dark .sidebar .brand-mark{
+  background:#f7faf8;
+  color:#174235;
+}
+body.dark .sidebar .avatar{
+  background:#31564b;
+  color:#fff;
+}
+body.dark .sidebar .user-card{
+  border-color:#2a5145;
+}
+body.dark .topbar{
+  background:#171b19;
+}
+body.dark .main section{
+  background:#171b19;
+}
+body.dark .btn{
+  background:#d9eee5;
+  color:#173c30;
+}
+body.dark .task-row .check{
+  accent-color:#e38f9c;
+}
