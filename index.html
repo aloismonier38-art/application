@@ -4,19 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TeamHub — Application équipes</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
   <div id="app">
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div>
       <nav>
-        <button class="nav-item active" data-view="dashboard">Tableau de bord</button>
-        <button class="nav-item" data-view="documents">Fiches techniques</button>
-        <button class="nav-item" data-view="tasks">To-do list</button>
-        <button class="nav-item" data-view="requests">Besoins & interventions</button>
-        <button class="nav-item" data-view="reports">Rapports hebdomadaires</button>
-      </nav>
+<button class="nav-item active" data-view="dashboard"><span class="nav-icon">⌂</span>Tableau de bord</button>
+<button class="nav-item" data-view="documents"><span class="nav-icon">▣</span>Fiches techniques</button>
+<button class="nav-item" data-view="tasks"><span class="nav-icon">✓</span>To-do list</button>
+<button class="nav-item" data-view="requests"><span class="nav-icon">⚒</span>Besoins & interventions</button>
+<button class="nav-item" data-view="reports"><span class="nav-icon">▤</span>Rapports hebdomadaires</button>
+</nav>
       <div class="sidebar-bottom">
         <div class="user-card"><div class="avatar">AM</div><div><strong>Aloïs Monier</strong><small id="roleLabel">Administrateur</small></div></div>
       </div>
@@ -28,6 +28,13 @@
       </header>
       <section id="content"></section>
     </main>
+<div class="bottom-nav">
+<button class="active" data-view="dashboard"><span class="bottom-icon">⌂</span>Accueil</button>
+<button data-view="documents"><span class="bottom-icon">▣</span>Fiches</button>
+<button data-view="tasks"><span class="bottom-icon">✓</span>Tâches</button>
+<button data-view="requests"><span class="bottom-icon">⚒</span>Besoins</button>
+<button data-view="reports"><span class="bottom-icon">▤</span>Rapports</button>
+</div>
   </div>
   <script src="app.js"></script>
 </body>
