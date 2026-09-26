@@ -16,8 +16,6 @@
     setMessage(signup?"Créez votre compte pour rejoindre l’équipe.":"Connectez-vous pour accéder à votre équipe.");
     if(submitButton)submitButton.textContent=signup?"Créer le compte":"Se connecter";
     if(switchBtn)switchBtn.textContent=signup?"J’ai déjà un compte":"Créer mon compte";
-    if(nameWrap)nameWrap.hidden=!signup;
-    if(nameInput)nameInput.required=signup;
   }
   function showAuth(){
     if(gate)gate.hidden=false;
@@ -59,10 +57,8 @@
       try{
         const email=$("#authEmail")?.value.trim()||"";
         const password=$("#authPassword")?.value||"";
-        const name=nameInput?.value.trim()||"";
         if(mode==="signup"){
-          if(!name)throw new Error("Indiquez votre nom complet.");
-          const result=await client.auth.signUp({email,password,options:{data:{full_name:name}}});
+          const result=await client.auth.signUp({email,password});
           if(result.error)throw result.error;
           if(result.data.session){
             setMessage("Compte créé. Ouverture de TeamHub…");
