@@ -43,8 +43,8 @@
 </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="supabase-config.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="supabase-config.js?v=12"></script>
+  <script src="app.js?v=12"></script>
   <script>
     window.__teamhubToggleSignup=function(){
       var title=document.getElementById("authTitle"),msg=document.getElementById("authMessage"),nameWrap=document.getElementById("authNameWrap"),submit=document.getElementById("authSubmit"),switchBtn=document.getElementById("authSwitch"),name=document.getElementById("authName");
@@ -67,7 +67,7 @@
       if(content && !content.innerHTML.trim() && gate && gate.hidden){
         gate.hidden=false;
         var msg=document.getElementById("authMessage");
-        if(msg) msg.textContent="Le chargement de TeamHub a rencontré un problème. Rechargez la page avec ?v=11.";
+        if(msg) msg.textContent="Le chargement de TeamHub a rencontré un problème. Rechargez la page avec ?v=12.";
       }
     },5000);
   </script>
