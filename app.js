@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// CosyHub 1.1.40 — single application/auth runtime; auth.js is no longer part of the boot chain.
+// CosyHub 1.1.41 — functional control audit: actions, preview, logout and document deletion fixed.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -178,10 +178,17 @@ function render(){
 
 function closeModal(){const m=$("#appModal");if(m)m.remove();}
 async function openPreview(id){
- const d=data.documents.find(x=>x.id===id);if(!d)return;
- const {data:url,error}=await supabase.storage.from("team-documents").createSignedUrl(d.storage_path,300);
- if(error){alert("Impossible d’ouvrir le document : "+error.message);return;}
- window.open(url.signedUrl,"_blank","noopener");
+  const d=data.documents.find(x=>x.id===id);if(!d)return;
+  const tab=window.open("about:blank","_blank");
+  try{
+    const {data:url,error}=await supabase.storage.from("team-documents").createSignedUrl(d.storage_path,300);
+    if(error)throw error;
+    if(tab)tab.location.href=url.signedUrl;
+    else window.location.href=url.signedUrl;
+  }catch(err){
+    if(tab)tab.close();
+    alert("Impossible d’ouvrir le document : "+(err?.message||"Erreur inconnue"));
+  }
 }
 async function deleteDocument(id){
  const d=data.documents.find(x=>x.id===id);if(!d)return;
@@ -204,7 +211,7 @@ async function openModal(type){
  if(type==="request")form='<label>Objet<input name="title" required></label><div class="form-grid"><label>Type<select name="kind"><option>Maintenance</option><option>Matériel</option><option>Informatique</option><option>Fournisseur</option></select></label><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label></div><label>Description<textarea name="description" required></textarea><label>Pièce jointe<input name="file" type="file"></label>';
  if(type==="report")form='<label>Semaine<input name="week" required placeholder="S39"></label><div class="form-grid"><label>CA TTC<input name="revenue" type="number" step=".01"></label><label>Clients<input name="clients" type="number"></label></div><div class="form-grid"><label>Ticket moyen<input name="ticket" type="number" step=".01"></label><label>Note<input name="rating" type="number" step=".01"></label></div><label>Commentaires<textarea name="comments"></textarea>';
  const m=document.createElement("div");m.id="appModal";m.className="modal-backdrop";
- m.innerHTML='<div class="modal"><div class="modal-head"><div><div class="eyebrow">Équipe</div><h2>'+names[type]+'</h2></div><button class="modal-close" data-close>×</button></div><form id="modalForm" data-type="'+type+'">'+form+'<div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn">Créer</button></div></form></div>';
+ m.innerHTML='<div class="modal"><div class="modal-head"><div><div class="eyebrow">Équipe</div><h2>'+names[type]+'</h2></div><button class="modal-close" data-close>×</button></div><form id="modalForm" data-type="'+type+'">'+form+'<div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn">'+(type==="document-edit"?"Enregistrer":"Créer")+'</button></div></form></div>';
  document.body.appendChild(m);
  if(type==="task"){
    const {data:people}=await supabase.from("profiles").select("id,full_name").eq("active",true).order("full_name");
@@ -216,13 +223,17 @@ async function openModal(type){
 document.addEventListener("click",async e=>{
  const close=e.target.closest("[data-close]");if(close){closeModal();return;}
  const nav=e.target.closest("[data-view]");if(nav){state.view=nav.dataset.view;render();return;}
- const modal=e.target.closest("[data-modal]");if(modal){openModal(modal.dataset.modal);return;}
+ const modal=e.target.closest("[data-modal]");if(modal){openModal(modal.dataset.modal).catch(err=>alert("Impossible d’ouvrir le formulaire : "+(err?.message||"Erreur inconnue")));return;}
  const filter=e.target.closest("[data-filter]");if(filter){state.taskFilter=filter.dataset.filter;renderTasks();return;}
  const preview=e.target.closest("[data-preview]");if(preview){await openPreview(preview.dataset.preview);return;}
  const menu=e.target.closest("[data-doc-menu]");if(menu){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);const box=document.querySelector('[data-menu-for="'+menu.dataset.docMenu+'"]');if(box)box.hidden=false;return;}
  const edit=e.target.closest("[data-doc-edit]");if(edit){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);window.__editDocumentId=edit.dataset.docEdit;openModal("document-edit");return;}
  const del=e.target.closest("[data-doc-delete]");if(del){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);await deleteDocument(del.dataset.docDelete);return;}
 });
+document.addEventListener("click",e=>{
+  if(!e.target.closest(".doc-menu-wrap"))document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);
+},true);
+
 document.addEventListener("change",async e=>{
  if(e.target.matches('[data-action="toggle-task"]')){
    const id=e.target.dataset.id,done=e.target.checked;
@@ -263,7 +274,13 @@ document.addEventListener("submit",async e=>{
  }catch(err){alert(err.message||"Impossible d’enregistrer.");}
 });
 
-roleToggle?.addEventListener("click",()=>authLogout?.click());
+roleToggle?.addEventListener("click",async()=>{
+  if(!confirm("Se déconnecter de CosyHub ?"))return;
+  const {error}=await supabase.auth.signOut();
+  if(error){alert("Impossible de se déconnecter : "+error.message);return;}
+  state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];data.reports=[];
+  showAuth(true);
+});
 const savedTheme=localStorage.getItem("teamhub-theme");if(savedTheme==="dark")document.body.classList.add("dark");
 function updateThemeButton(){const dark=document.body.classList.contains("dark");themeToggle?.setAttribute("aria-pressed",String(dark));themeToggle?.setAttribute("aria-label",dark?"Désactiver le mode sombre":"Activer le mode sombre");}
 themeToggle?.addEventListener("click",()=>{const dark=document.body.classList.toggle("dark");localStorage.setItem("teamhub-theme",dark?"dark":"light");updateThemeButton();});
