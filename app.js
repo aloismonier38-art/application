@@ -1,7 +1,19 @@
-const { createClient } = window.supabase;
-const supabase = createClient(window.TEAMHUB_SUPABASE_URL, window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY, {
-  auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}
-});
+let supabase;
+function showFatal(message){
+  const gate=document.getElementById("authGate");
+  const msg=document.getElementById("authMessage");
+  if(gate)gate.hidden=false;
+  if(msg){msg.textContent=message;msg.style.color="#b94d61";}
+}
+if(!window.supabase?.createClient){
+  showFatal("Impossible de charger le module de connexion. Rechargez la page.");
+  throw new Error("Supabase SDK indisponible");
+}
+if(!window.TEAMHUB_SUPABASE_URL || !window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY){
+  showFatal("Configuration de connexion manquante. Rechargez la page.");
+  throw new Error("Configuration Supabase indisponible");
+}
+supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
 const data={tasks:[],documents:[],requests:[],reports:[]};
@@ -62,7 +74,7 @@ function toggleAuthMode(){
   window.__teamhubAuthMode=next;
   setAuthMode(next);
 }
-authSwitch.addEventListener("click",toggleAuthMode);
+authSwitch.addEventListener("click",toggleAuthMode);\nwindow.__teamhubAuthBound=true;
 authLogout.addEventListener("click",()=>supabase.auth.signOut());
 
 async function loadProfile(){
@@ -210,7 +222,7 @@ const savedTheme=localStorage.getItem("teamhub-theme");if(savedTheme==="dark")do
 function updateThemeButton(){const dark=document.body.classList.contains("dark");themeToggle?.setAttribute("aria-pressed",String(dark));themeToggle?.setAttribute("aria-label",dark?"Désactiver le mode sombre":"Activer le mode sombre");}
 themeToggle?.addEventListener("click",()=>{const dark=document.body.classList.toggle("dark");localStorage.setItem("teamhub-theme",dark?"dark":"light");updateThemeButton();});
 
-async function boot(){
+let booting=false;\nasync function boot(){\n if(booting)return;\n booting=true;
  try{
    const {data:{session}}=await supabase.auth.getSession();
    if(!session){showAuth(true);return;}
