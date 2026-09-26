@@ -56,7 +56,7 @@ begin
   on conflict (code) do nothing;
 
   select id into est_id from public.establishments where code='BOURGOIN' limit 1;
-  select not exists(select 1 from public.profiles) into first_user;
+  -- The first account without an existing admin becomes administrator.\n  -- This remains correct even if a previous test left an employee profile behind.\n  select not exists(select 1 from public.profiles where role='admin') into first_user;
 
   insert into public.profiles(id, full_name, role, establishment_id)
   values (
