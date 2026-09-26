@@ -74,7 +74,8 @@ function toggleAuthMode(){
   window.__teamhubAuthMode=next;
   setAuthMode(next);
 }
-authSwitch.addEventListener("click",toggleAuthMode);\nwindow.__teamhubAuthBound=true;
+authSwitch.addEventListener("click",toggleAuthMode);
+window.__teamhubAuthBound=true;
 authLogout.addEventListener("click",()=>supabase.auth.signOut());
 
 async function loadProfile(){
@@ -237,6 +238,8 @@ async function boot(){
    const detail=err?.message||err?.details||err?.hint||"Erreur inconnue";
    authError("Erreur de chargement : "+detail);
    console.error("TeamHub boot error:",err);
+ }finally{
+   booting=false;
  }
 }
 supabase.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT"){showAuth(true);setAuthMode("login");}else if(event==="SIGNED_IN"){boot();}});
