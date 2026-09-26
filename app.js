@@ -35,6 +35,8 @@ function roleText(v){return ({admin:"Administrateur",manager:"Manager",employee:
 
 function showAuth(show=true){
   authGate.hidden=!show;
+  const appRoot=document.getElementById("app");
+  if(appRoot)appRoot.hidden=show;
   document.body.classList.toggle("auth-open",show);
 }
 function setAuthMode(mode){
