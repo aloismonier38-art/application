@@ -208,9 +208,9 @@ async function boot(){
    showAuth(false);authLogout.hidden=false;render();
  }catch(err){
    showAuth(true);
-   setAuthMode("login");
    const detail=err?.message||err?.details||err?.hint||"Erreur inconnue";
-   authError("Erreur de chargement : "+detail);
+   const msg=document.getElementById("authMessage");
+   if(msg){msg.textContent="Erreur de chargement : "+detail;msg.style.color="#b94d61";}
    console.error("TeamHub boot error:",err);
  }finally{
    booting=false;
