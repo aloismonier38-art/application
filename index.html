@@ -44,7 +44,7 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=1"></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
   <script>
     setTimeout(function(){
       var content=document.getElementById("content");
@@ -52,7 +52,7 @@
       if(content && !content.innerHTML.trim() && gate && gate.hidden){
         gate.hidden=false;
         var msg=document.getElementById("authMessage");
-        if(msg) msg.textContent="Le chargement de TeamHub a rencontré un problème. Rechargez la page avec ?v=8.";
+        if(msg) msg.textContent="Le chargement de TeamHub a rencontré un problème. Rechargez la page avec ?v=9.";
       }
     },5000);
   </script>
