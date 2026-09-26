@@ -202,20 +202,40 @@ let booting=false;
 async function boot(){
   if(booting)return;
   booting=true;
- try{
-   const {data:{session}}=await supabase.auth.getSession();
-   if(!session){showAuth(true);return;}
-   await loadProfile();await loadData();
-   showAuth(false);authLogout.hidden=false;render();
- }catch(err){
-   showAuth(true);
-   const detail=err?.message||err?.details||err?.hint||"Erreur inconnue";
-   const msg=document.getElementById("authMessage");
-   if(msg){msg.textContent="Erreur de chargement : "+detail;msg.style.color="#b94d61";}
-   console.error("TeamHub boot error:",err);
- }finally{
-   booting=false;
- }
+  try{
+    const {data:{session}}=await supabase.auth.getSession();
+    if(!session){showAuth(true);return;}
+
+    await loadProfile();
+
+    // Render the application immediately after authentication.
+    // Data loading must never leave a blank screen.
+    showAuth(false);
+    if(authLogout)authLogout.hidden=false;
+    render();
+
+    try{
+      await Promise.race([
+        loadData(),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error("Le chargement des données prend trop de temps.")),8000))
+      ]);
+      render();
+    }catch(dataError){
+      console.error("TeamHub data loading error:",dataError);
+      const section=document.getElementById("content");
+      if(section){
+        section.innerHTML='<div class="empty"><strong>Tableau de bord chargé.</strong><br><span class="muted">Les données n’ont pas encore pu être récupérées. Rechargez la page dans quelques secondes.</span></div>';
+      }
+    }
+  }catch(err){
+    showAuth(true);
+    const detail=err?.message||err?.details||err?.hint||"Erreur inconnue";
+    const msg=document.getElementById("authMessage");
+    if(msg){msg.textContent="Erreur de connexion : "+detail;msg.style.color="#b94d61";}
+    console.error("TeamHub boot error:",err);
+  }finally{
+    booting=false;
+  }
 }
 window.startTeamHubApp=boot;
 updateThemeButton();
