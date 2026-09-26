@@ -241,7 +241,7 @@ async function boot(){
       ]);
       render();
     }catch(dataError){
-      console.error("TeamHub data loading error:",dataError);
+      console.error("CosyHub data loading error:",dataError);
       const section=document.getElementById("content");
       if(section){
         section.innerHTML='<div class="empty"><strong>Tableau de bord chargé.</strong><br><span class="muted">Les données n’ont pas encore pu être récupérées. Rechargez la page dans quelques secondes.</span></div>';
@@ -252,12 +252,12 @@ async function boot(){
     const detail=err?.message||err?.details||err?.hint||"Erreur inconnue";
     const msg=document.getElementById("authMessage");
     if(msg){msg.textContent="Erreur de connexion : "+detail;msg.style.color="#b94d61";}
-    console.error("TeamHub boot error:",err);
+    console.error("CosyHub boot error:",err);
   }finally{
     booting=false;
   }
 }
-window.startTeamHubApp=boot;
+window.startCosyHubApp=boot;
 updateThemeButton();
 
 })();
