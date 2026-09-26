@@ -2,6 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
+// CosyHub 1.1.40 — single application/auth runtime; auth.js is no longer part of the boot chain.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -55,6 +56,53 @@ function setAuthMode(mode){
 }
 function authError(msg){authMessage.textContent=msg;authMessage.style.color="#b94d61";}
 function authInfo(msg){authMessage.textContent=msg;authMessage.style.color="";}
+
+function showRuntimeError(err){
+  console.error("CosyHub runtime error:",err);
+  if(content){
+    content.innerHTML='<div class="empty" style="text-align:left"><strong>CosyHub rencontre une erreur.</strong><br><span class="muted">'+esc(err?.message||String(err)||"Erreur inconnue")+'</span></div>';
+  }
+}
+
+async function handleLogin(e){
+  e.preventDefault();
+  if(!authSubmit)return;
+  authSubmit.disabled=true;
+  try{
+    const email=$("#authEmail")?.value.trim()||"";
+    const password=$("#authPassword")?.value||"";
+    const {error}=await supabase.auth.signInWithPassword({email,password});
+    if(error)throw error;
+    showAuth(false);
+    await boot();
+  }catch(err){authError(err?.message||"Impossible de se connecter.");}
+  finally{authSubmit.disabled=false;}
+}
+
+async function handleSignup(e){
+  e.preventDefault();
+  const submit=$("#signupSubmit");
+  if(submit)submit.disabled=true;
+  try{
+    const email=$("#signupEmail")?.value.trim()||"";
+    const password=$("#signupPassword")?.value||"";
+    const {data:result,error}=await supabase.auth.signUp({email,password});
+    if(error)throw error;
+    if(result?.session){
+      showAuth(false);
+      await boot();
+    }else{
+      authInfo("Compte créé. Vérifiez votre e-mail puis connectez-vous.");
+      authForm?.reset();
+      $("#signupForm")?.reset();
+    }
+  }catch(err){authError(err?.message||"Impossible de créer le compte.");}
+  finally{if(submit)submit.disabled=false;}
+}
+
+authForm?.addEventListener("submit",handleLogin);
+$("#signupForm")?.addEventListener("submit",handleSignup);
+
 
 async function loadProfile(){
   const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",(await supabase.auth.getUser()).data.user.id).single();
@@ -225,7 +273,8 @@ async function boot(){
   if(booting)return;
   booting=true;
   try{
-    const {data:{session}}=await supabase.auth.getSession();
+    const {data:{session},error:sessionError}=await supabase.auth.getSession();
+    if(sessionError)throw sessionError;
     if(!session){showAuth(true);return;}
 
     // Show the shell immediately. Profile/data loading must never block the UI.
@@ -259,16 +308,14 @@ async function boot(){
       }
     }
   }catch(err){
-    showAuth(true);
-    const detail=err?.message||err?.details||err?.hint||"Erreur inconnue";
-    const msg=document.getElementById("authMessage");
-    if(msg){msg.textContent="Erreur de connexion : "+detail;msg.style.color="#b94d61";}
-    console.error("CosyHub boot error:",err);
+    showAuth(false);
+    showRuntimeError(err);
   }finally{
     booting=false;
   }
 }
 window.startCosyHubApp=boot;
+boot().catch(showRuntimeError);
 updateThemeButton();
 
 })();
