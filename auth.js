@@ -3,7 +3,7 @@
   const $=s=>document.querySelector(s);
   const gate=$("#authGate"),form=$("#authForm"),switchBtn=$("#authSwitch");
   const title=$("#authTitle"),message=$("#authMessage"),submitButton=$("#authSubmit");
-  const nameWrap=$("#authNameWrap"),nameInput=$("#authName"),logout=$("#authLogout");
+  const logout=$("#authLogout");
   let mode="login",client=null,appLoaded=false,appLoading=false;
 
   function setMessage(text,error=false){
@@ -35,7 +35,7 @@
     if(appLoaded||appLoading)return;
     appLoading=true;
     const script=document.createElement("script");
-    script.src="app.js?v=21";
+    script.src="app.js?v=22";
     script.onload=async()=>{
       appLoaded=true;appLoading=false;
       if(typeof window.startTeamHubApp==="function"){
@@ -89,7 +89,7 @@
     try{
       if(!window.supabase?.createClient)throw new Error("Le module Supabase n’a pas été chargé.");
       if(!window.TEAMHUB_SUPABASE_URL||!window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY)throw new Error("La configuration Supabase est manquante.");
-      client=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+      client=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
       window.teamHubSupabase=client;
       client.auth.onAuthStateChange(event=>{if(event==="SIGNED_OUT"){showAuth();setMode("login");}});
       const session=await client.auth.getSession();
