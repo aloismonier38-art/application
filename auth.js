@@ -46,6 +46,8 @@
   }
   function hideAuth(){
     if(gate)gate.hidden=true;
+    const appRoot=$("#app");
+    if(appRoot)appRoot.hidden=false;
     document.body.classList.remove("auth-open");
   }
   function showFatal(text){
