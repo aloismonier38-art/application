@@ -1,0 +1,2 @@
+window.TEAMHUB_SUPABASE_URL="https://zxnvqsyqlrzdnnbrqqoi.supabase.co";
+window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY="sb_publishable_Hw79ZXf5urAT6FSmWME9oQ_P5RfzRb3";
