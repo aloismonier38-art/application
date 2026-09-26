@@ -59,12 +59,12 @@
     if(appLoaded||appLoading)return;
     appLoading=true;
     const script=document.createElement("script");
-    script.src="app.js?v=16";
+    script.src="app.js?v=18";
     script.onload=async()=>{
       appLoaded=true;
       appLoading=false;
       if(typeof window.startTeamHubApp==="function")await window.startTeamHubApp();
-      else showFatal("Le module TeamHub n’a pas pu démarrer.");
+      else {\n        // Compatibility fallback: an older cached app.js may not expose the bootstrap.\n        const retry=document.createElement("script");\n        retry.src="app.js?v=18&retry=1";\n        retry.onload=async()=>{if(typeof window.startTeamHubApp==="function")await window.startTeamHubApp();else showFatal("Le module TeamHub n’a pas pu démarrer.");};\n        retry.onerror=()=>showFatal("Impossible de charger le moteur TeamHub.");\n        document.body.appendChild(retry);\n      }
     };
     script.onerror=()=>{appLoading=false;showFatal("Impossible de charger l’application TeamHub.");};
     document.body.appendChild(script);
