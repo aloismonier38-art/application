@@ -139,7 +139,7 @@ async function openPreview(id){
  if(error){alert("Impossible d’ouvrir le document : "+error.message);return;}
  window.open(url.signedUrl,"_blank","noopener");
 }
-function openModal(type){
+async function openModal(type){
  closeModal();
  const names={task:"Nouvelle tâche",document:"Ajouter une fiche technique",request:"Nouveau besoin / intervention",report:"Nouveau rapport hebdomadaire"};
  let form="";
