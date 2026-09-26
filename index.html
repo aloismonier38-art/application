@@ -12,7 +12,7 @@
 .auth-brand{padding:0 0 24px}.auth-card h2{margin:0 0 6px;font-size:24px}.auth-card form{display:grid;gap:13px;margin-top:20px}.auth-card label{display:grid;gap:6px;font-size:12px;font-weight:650;color:#53645c}.auth-card input{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px;background:#fff;color:var(--green);font:inherit}.auth-switch,.auth-logout{border:0;background:transparent;color:var(--green);cursor:pointer;font-size:12px;margin-top:14px;text-decoration:underline}.auth-logout{display:block;margin-left:auto;margin-right:auto}body.dark .auth-gate{background:#171b19}body.dark .auth-card{background:#202622;border-color:#303733;color:#e8eee9}body.dark .auth-card label{color:#b8c5bf}body.dark .auth-card input{background:#181d1a;border-color:#3a433e;color:#e8eee9}
 </style>\n</head>
 <body>
-  <div id="authGate" class="auth-gate" hidden><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div><h2 id="authTitle">Connexion</h2><p id="authMessage" class="muted">Connectez-vous pour accéder à votre équipe.</p><form id="authForm"><label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label><label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label><label id="authNameWrap" hidden>Nom complet<input id="authName" type="text" autocomplete="name" placeholder="Aloïs Monier"></label><button class="btn" id="authSubmit">Se connecter</button></form><button class="auth-switch" id="authSwitch" type="button">Créer mon compte</button><button class="auth-logout" id="authLogout" type="button" hidden>Se déconnecter</button></div></div>
+  <div id="authGate" class="auth-gate" hidden><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div><h2 id="authTitle">Connexion</h2><p id="authMessage" class="muted">Connectez-vous pour accéder à votre équipe.</p><form id="authForm"><label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label><label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label><label id="authNameWrap" hidden>Nom complet<input id="authName" type="text" autocomplete="name" placeholder="Aloïs Monier"></label><button class="btn" id="authSubmit">Se connecter</button></form><button class="auth-switch" id="authSwitch" type="button" onclick="window.__teamhubToggleSignup && window.__teamhubToggleSignup()">Créer mon compte</button><button class="auth-logout" id="authLogout" type="button" hidden>Se déconnecter</button></div></div>
   <div id="app">
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div>
@@ -44,7 +44,21 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=1"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
+  <script>
+    window.__teamhubToggleSignup=function(){
+      var title=document.getElementById("authTitle"),msg=document.getElementById("authMessage"),nameWrap=document.getElementById("authNameWrap"),submit=document.getElementById("authSubmit"),switchBtn=document.getElementById("authSwitch"),name=document.getElementById("authName");
+      if(!title)return;
+      var signup=title.textContent==="Connexion";
+      title.textContent=signup?"Créer mon compte":"Connexion";
+      msg.textContent=signup?"Le premier compte créé devient administrateur. Les suivants sont salariés par défaut.":"Connectez-vous pour accéder à votre équipe.";
+      msg.style.color="";
+      submit.textContent=signup?"Créer le compte":"Se connecter";
+      switchBtn.textContent=signup?"J’ai déjà un compte":"Créer mon compte";
+      nameWrap.hidden=!signup;
+      name.required=signup;
+    };
+  </script>
   <script>
     setTimeout(function(){
       var content=document.getElementById("content");
@@ -52,7 +66,7 @@
       if(content && !content.innerHTML.trim() && gate && gate.hidden){
         gate.hidden=false;
         var msg=document.getElementById("authMessage");
-        if(msg) msg.textContent="Le chargement de TeamHub a rencontré un problème. Rechargez la page avec ?v=9.";
+        if(msg) msg.textContent="Le chargement de TeamHub a rencontré un problème. Rechargez la page avec ?v=10.";
       }
     },5000);
   </script>
