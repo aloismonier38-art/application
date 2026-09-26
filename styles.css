@@ -250,3 +250,6 @@ body.auth-open .app-version{bottom:10px}
  .login-panel{border-bottom:0}
  .app-version{right:10px!important;bottom:10px!important}
 }
+
+/* COSYHUB LOGO v1.1.26 */
+.brand-mark{display:inline-flex;align-items:center;justify-content:center;overflow:hidden}.brand-mark img{width:100%;height:100%;object-fit:contain;display:block}
