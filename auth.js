@@ -22,9 +22,14 @@
 
   function loadApp(){
     if(appLoaded||appLoading)return;
+    if(typeof window.startCosyHubApp==="function"){
+      appLoaded=true;
+      Promise.resolve(window.startCosyHubApp()).catch(err=>{console.error(err);showFatal(err?.message||"Erreur de démarrage.");});
+      return;
+    }
     appLoading=true;
     const script=document.createElement("script");
-    script.src="app.js?v=36";
+    script.src="app.js?v=37";
     script.onload=async()=>{
       appLoaded=true;appLoading=false;
       if(typeof window.startCosyHubApp==="function"){
