@@ -35,7 +35,7 @@
     if(appLoaded||appLoading)return;
     appLoading=true;
     const script=document.createElement("script");
-    script.src="app.js?v=20";
+    script.src="app.js?v=21";
     script.onload=async()=>{
       appLoaded=true;appLoading=false;
       if(typeof window.startTeamHubApp==="function"){
