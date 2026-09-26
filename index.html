@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>CosyHub — Gestion des équipes</title>
-  <link rel="stylesheet" href="styles.css?v=31">
+  <link rel="stylesheet" href="styles.css?v=32">
 <style>
 .auth-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:20px;background:var(--cream)}
 .auth-gate[hidden]{display:none}#app[hidden]{display:none}
@@ -15,7 +15,7 @@
 </style>
 </head>
 <body>
-  <div id="appVersion" class="app-version">CosyHub 1.1.31</div>
+  <div id="appVersion" class="app-version">CosyHub 1.1.32</div>
   <div id="authGate" class="auth-gate">
   <div class="auth-shell">
     <div class="auth-brand-top"><div><strong>CosyHub</strong><small>Gestion des équipes</small></div></div>
@@ -43,21 +43,6 @@
         <p class="auth-help">Votre profil et votre rôle seront associés à votre compte.</p>
       </section>
     </div>
-  </div>
-</div>
-  <div class="signup-dialog" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
-    <button class="signup-close" id="signupClose" type="button" aria-label="Fermer">×</button>
-    <div class="brand auth-brand"><div><strong>CosyHub</strong><small>Gestion des équipes</small></div></div>
-    <h2 id="signupTitle">Créer mon compte</h2>
-    <p id="signupMessage" class="muted">Créez votre compte pour rejoindre l’équipe.</p>
-    <form id="signupForm">
-      <label>Nom complet<input id="signupName" type="text" required autocomplete="name" placeholder="Aloïs Monier"></label>
-      <label>Email professionnel<input id="signupEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label>
-      <label>Mot de passe<input id="signupPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="6 caractères minimum"></label>
-      <label>Confirmer le mot de passe<input id="signupPasswordConfirm" type="password" required minlength="6" autocomplete="new-password" placeholder="Retapez votre mot de passe"></label>
-      <button class="btn" id="signupSubmit" type="submit">Créer mon compte</button>
-    </form>
-    <button class="auth-switch" id="signupCancel" type="button">Retour à la connexion</button>
   </div>
 </div>
   <div id="app" hidden>
@@ -90,7 +75,7 @@
 </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="supabase-config.js?v=31"></script>
-  <script src="auth.js?v=31"></script>
+  <script src="supabase-config.js?v=32"></script>
+  <script src="auth.js?v=32"></script>
 </body>
 </html>
