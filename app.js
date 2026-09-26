@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// CosyHub 1.1.42 — paramètres profil/application et déconnexion réelle.
+// CosyHub 1.1.43 — bouton paramètres compact à la place du rôle.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -190,7 +190,7 @@ function render(){
  ({dashboard:renderDashboard,documents:renderDocuments,tasks:renderTasks,requests:renderRequests,reports:renderReports,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
- roleToggle.textContent=state.view==="settings"?"Paramètres":roleText(state.role); if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
+ roleToggle.innerHTML='<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15 .1.1a2 2 0 0 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4v.2a2 2 0 0 1-4 0v-.2a2 2 0 0 0-3.4-1.4l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1A2 2 0 0 0 4.4 11H4.2a2 2 0 0 1 0-4h.2A2 2 0 0 0 5.8 3.6l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1A2 2 0 0 0 12 4.2V4a2 2 0 0 1 4 0v.2a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1A2 2 0 0 0 20 11h.2a2 2 0 0 1 0 4H20a2 2 0 0 0-.6 0Z"/></svg><span>Paramètres</span>'; if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
 }
 
 function closeModal(){const m=$("#appModal");if(m)m.remove();}
