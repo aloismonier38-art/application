@@ -22,7 +22,25 @@ function can(action){
 }
 function fmtDate(s){return new Date(s+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"});}
 function daysLate(s){return Math.max(0,Math.floor((new Date()-new Date(s+"T23:59:59"))/86400000));}
-function toggleTask(id){const t=data.tasks.find(x=>x.id===id);if(t)t.done=!t.done;render();}
+function toggleTask(id){
+ const t=data.tasks.find(x=>x.id===id);
+ if(!t)return;
+ t.done=!t.done;
+ t.completedAt=t.done?new Date().toISOString():null;
+ render();
+}
+function isToday(date){
+ if(!date)return false;
+ const d=new Date(date), n=new Date();
+ return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();
+}
+function setTaskFilter(filter){
+ state.taskFilter=filter;
+ renderTasks();
+}
+function taskFilterButton(label,filter){
+ return '<button class="filter-btn '+((state.taskFilter||"open")===filter?"active":"")+'" onclick="setTaskFilter(\''+filter+'\')">'+label+'</button>';
+}
 
 function taskHtml(t){
  const late=daysLate(t.due);
@@ -56,6 +74,21 @@ function renderDocuments(){
 }
 
 function renderTasks(){
+ state.taskFilter=state.taskFilter||"open";
+ const open=data.tasks.filter(t=>!t.done);
+ const doneToday=data.tasks.filter(t=>t.done&&isToday(t.completedAt));
+ const all=data.tasks;
+ const visible=state.taskFilter==="done"?doneToday:state.taskFilter==="all"?all:open;
+ const days=["Lun 28","Mar 29","Mer 30","Jeu 1","Ven 2","Sam 3","Dim 4"];
+ content.innerHTML='<div class="section-title"><div><h2>Tâches</h2><div class="muted">À faire, échéances et récurrences</div></div>'+
+ (can("task")?'<button class="btn">+ Nouvelle</button>':"")+'</div>'+
+ '<div class="task-filters">'+taskFilterButton("À faire","open")+taskFilterButton("Validées aujourd\'hui","done")+taskFilterButton("Toutes","all")+'</div>'+
+ '<div class="task-summary"><span>'+open.length+' à faire</span><span>'+doneToday.length+' validée'+(doneToday.length>1?"s":"")+' aujourd\'hui</span></div>'+
+ '<div class="list">'+(visible.length?visible.map(taskHtml).join(""):'<div class="empty">Aucune tâche dans cette vue.</div>')+'</div>'+
+ '<div class="section-title"><h2>Planning</h2><span class="muted">Aperçu de la semaine</span></div>'+
+ '<div class="mini-calendar">'+days.map((d,i)=>'<div class="day"><b>'+d+'</b>'+
+ (i<4?'<div class="day-task">'+data.tasks[i%data.tasks.length].title+'</div>':"")+'</div>').join("")+'</div>';
+}
  const days=["Lun 28","Mar 29","Mer 30","Jeu 1","Ven 2","Sam 3","Dim 4"];
  content.innerHTML='<div class="section-title"><div><h2>Tâches</h2><div class="muted">À faire, échéances et récurrences</div></div>'+
  (can("task")?'<button class="btn">+ Nouvelle</button>':"")+'</div>'+
