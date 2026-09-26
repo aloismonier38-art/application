@@ -170,3 +170,25 @@ with check (user_id = auth.uid());
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on public.establishments, public.profiles, public.documents, public.tasks, public.task_completions, public.requests, public.reports, public.notifications to authenticated;
 grant execute on function public.my_role(), public.my_establishment(), public.is_admin(), public.is_manager() to authenticated;
+
+-- Private document storage
+insert into storage.buckets (id, name, public)
+values ('team-documents','team-documents',false)
+on conflict (id) do nothing;
+
+drop policy if exists team_documents_select on storage.objects;
+create policy team_documents_select on storage.objects for select to authenticated
+using (bucket_id='team-documents' and (public.is_admin() or (storage.foldername(name))[1] = public.my_establishment()::text));
+
+drop policy if exists team_documents_insert on storage.objects;
+create policy team_documents_insert on storage.objects for insert to authenticated
+with check (bucket_id='team-documents' and public.is_manager() and (storage.foldername(name))[1] = public.my_establishment()::text);
+
+drop policy if exists team_documents_update on storage.objects;
+create policy team_documents_update on storage.objects for update to authenticated
+using (bucket_id='team-documents' and public.is_manager() and (storage.foldername(name))[1] = public.my_establishment()::text)
+with check (bucket_id='team-documents' and public.is_manager() and (storage.foldername(name))[1] = public.my_establishment()::text);
+
+drop policy if exists team_documents_delete on storage.objects;
+create policy team_documents_delete on storage.objects for delete to authenticated
+using (bucket_id='team-documents' and public.is_manager() and (storage.foldername(name))[1] = public.my_establishment()::text);
