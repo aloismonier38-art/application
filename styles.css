@@ -18,3 +18,9 @@
 .task-row.task-done .muted{text-decoration:line-through;color:#9aa09c}
 .task-row.task-done .tag{filter:grayscale(1);opacity:.7}
 .task-row.task-done .check{accent-color:#7d8580}
+
+/* Stabilisation icones sidebar */
+.sidebar nav .nav-item{display:flex;flex-direction:row;align-items:center;width:100%;min-height:42px;line-height:1.2}
+.sidebar nav .nav-icon{display:flex;align-items:center;justify-content:center;width:22px;height:22px;min-width:22px;flex:0 0 22px}
+.sidebar nav .nav-icon svg{display:block!important;width:20px!important;height:20px!important;max-width:20px!important;max-height:20px!important}
+.bottom-nav .bottom-icon svg{display:block;width:21px;height:21px}
