@@ -24,17 +24,17 @@
     if(appLoaded||appLoading)return;
     appLoading=true;
     const script=document.createElement("script");
-    script.src="app.js?v=26";
+    script.src="app.js?v=27";
     script.onload=async()=>{
       appLoaded=true;appLoading=false;
-      if(typeof window.startTeamHubApp==="function"){
-        try{await window.startTeamHubApp();}
+      if(typeof window.startCosyHubApp==="function"){
+        try{await window.startCosyHubApp();}
         catch(err){console.error(err);showFatal(err?.message||"Erreur de démarrage.");}
       }else{
-        showFatal("Le moteur TeamHub n’est pas disponible.");
+        showFatal("Le moteur CosyHub n’est pas disponible.");
       }
     };
-    script.onerror=()=>{appLoading=false;showFatal("Impossible de charger le moteur TeamHub.");};
+    script.onerror=()=>{appLoading=false;showFatal("Impossible de charger le moteur CosyHub.");};
     document.body.appendChild(script);
   }
 
@@ -49,7 +49,7 @@
       if(result.error)throw result.error;
       hideAuth();loadApp();
     }catch(err){
-      console.error("TeamHub login error:",err);
+      console.error("CosyHub login error:",err);
       setMessage(err?.message||"Impossible de se connecter.",true);
     }finally{loginSubmit.disabled=false;}
   }
@@ -70,7 +70,7 @@
         loginForm?.reset();signupForm?.reset();
       }
     }catch(err){
-      console.error("TeamHub signup error:",err);
+      console.error("CosyHub signup error:",err);
       setMessage(err?.message||"Impossible de créer le compte.",true);
     }finally{signupSubmit.disabled=false;}
   }
@@ -90,7 +90,7 @@
       if(session.error)throw session.error;
       if(session.data.session){hideAuth();loadApp();}
     }catch(err){
-      console.error("TeamHub auth init error:",err);
+      console.error("CosyHub auth init error:",err);
       setMessage(err?.message||"Impossible d’initialiser la connexion.",true);
     }
   }
