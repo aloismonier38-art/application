@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// CosyHub 1.1.41 — functional control audit: actions, preview, logout and document deletion fixed.
+// CosyHub 1.1.42 — paramètres profil/application et déconnexion réelle.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -24,9 +24,9 @@ const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
 const data={tasks:[],documents:[],requests:[],reports:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
-const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle"),themeToggle=$("#themeToggle");
+const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle"),themeToggle=$("#themeToggle"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
-const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",tasks:"To-do list",requests:"Besoins & interventions",reports:"Rapports hebdomadaires"};
+const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",tasks:"To-do list",requests:"Besoins & interventions",reports:"Rapports hebdomadaires",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
@@ -163,6 +163,23 @@ function renderRequests(){
  content.innerHTML='<div class="section-title"><h2>Besoins & interventions</h2><button class="btn" data-modal="request">+ Nouveau besoin</button></div>'+
  '<div class="list">'+(data.requests.length?data.requests.map(r=>'<div class="row"><div><strong>'+esc(r.title)+'</strong><div class="muted">'+esc(r.kind)+' · '+esc(priorityLabel(r.priority))+'</div></div><span class="tag">'+esc(r.status)+'</span></div>').join(""):'<div class="empty">Aucune demande.</div>')+'</div>';
 }
+function renderSettings(){
+  const p=state.profile||{};
+  const email=state.profile?.email||"";
+  const initials=(p.full_name||"Aloïs Monier").split(/\\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
+  content.innerHTML='<div class="section-title"><div><h2>Paramètres</h2><div class="muted">Gérez votre profil et les réglages de CosyHub.</div></div></div>'+
+  '<div class="settings-grid">'+
+  '<section class="card settings-card"><div class="settings-card-head"><div><div class="stat-label">Profil</div><h3>Mes informations</h3></div><div class="settings-avatar">'+esc(initials)+'</div></div>'+
+  '<form id="profileSettingsForm" class="settings-form"><label>Nom affiché<input name="full_name" required value="'+esc(p.full_name||"")+'"></label>'+
+  '<label>Email<input value="'+esc(email||"Non disponible")+'" disabled></label>'+
+  '<label>Rôle<input value="'+esc(roleText(state.role))+'" disabled></label>'+
+  '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section>'+
+  '<section class="card settings-card"><div class="stat-label">Application</div><h3>Préférences</h3>'+
+  '<div class="settings-row"><div><strong>Mode sombre</strong><div class="muted">Adapter l’affichage à vos préférences.</div></div><button type="button" class="btn-secondary" data-settings-theme>Changer</button></div>'+
+  '<div class="settings-row"><div><strong>Version</strong><div class="muted">CosyHub 1.1.42</div></div></div></section>'+
+  '<section class="card settings-card settings-danger"><div class="stat-label">Session</div><h3>Compte</h3><p class="muted">Déconnectez-vous de cet appareil. Vous pourrez vous reconnecter avec votre adresse e-mail et votre mot de passe.</p>'+
+  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div>';
+}
 function renderReports(){
  content.innerHTML='<div class="section-title"><h2>Rapports hebdomadaires</h2>'+(can("report")?'<button class="btn" data-modal="report">+ Nouveau rapport</button>':"")+'</div>'+
  '<div class="list">'+(data.reports.length?data.reports.map(r=>'<div class="row"><div><strong>'+esc(r.week_label)+'</strong><div class="muted">CA '+(r.revenue??"—")+' € · '+(r.clients??"—")+' clients · Note '+(r.rating??"—")+'</div></div></div>').join(""):'<div class="empty">Aucun rapport enregistré.</div>')+'</div>';
@@ -170,10 +187,10 @@ function renderReports(){
 
 function render(){
  pageTitle.textContent=titles[state.view];
- ({dashboard:renderDashboard,documents:renderDocuments,tasks:renderTasks,requests:renderRequests,reports:renderReports}[state.view]||renderDashboard)();
+ ({dashboard:renderDashboard,documents:renderDocuments,tasks:renderTasks,requests:renderRequests,reports:renderReports,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
- roleToggle.textContent=roleText(state.role);
+ roleToggle.textContent=state.view==="settings"?"Paramètres":roleText(state.role); if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
 }
 
 function closeModal(){const m=$("#appModal");if(m)m.remove();}
@@ -242,8 +259,27 @@ document.addEventListener("change",async e=>{
    await loadData();render();
  }
 });
+document.addEventListener("click",async e=>{
+  const logout=e.target.closest("[data-logout]");
+  if(logout){
+    if(!confirm("Se déconnecter de CosyHub ?"))return;
+    logout.disabled=true;
+    const {error}=await supabase.auth.signOut();
+    if(error){logout.disabled=false;alert("Impossible de se déconnecter : "+error.message);return;}
+    state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];data.reports=[];
+    showAuth(true);
+    return;
+  }
+  const theme=e.target.closest("[data-settings-theme]");
+  if(theme){
+    const dark=document.body.classList.toggle("dark");
+    localStorage.setItem("teamhub-theme",dark?"dark":"light");
+    updateThemeButton();
+    renderSettings();
+  }
+});
 document.addEventListener("submit",async e=>{
- if(e.target.id!=="modalForm")return;
+ if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=String(fd.get("full_name")||"").trim(); if(!name)return; const {error}=await supabase.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",state.profile.id); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id!=="modalForm")return;
  e.preventDefault();
  const f=e.target,fd=new FormData(f),type=f.dataset.type,est=state.profile.establishment_id,user=(await supabase.auth.getUser()).data.user;
  try{
@@ -274,13 +310,7 @@ document.addEventListener("submit",async e=>{
  }catch(err){alert(err.message||"Impossible d’enregistrer.");}
 });
 
-roleToggle?.addEventListener("click",async()=>{
-  if(!confirm("Se déconnecter de CosyHub ?"))return;
-  const {error}=await supabase.auth.signOut();
-  if(error){alert("Impossible de se déconnecter : "+error.message);return;}
-  state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];data.reports=[];
-  showAuth(true);
-});
+
 const savedTheme=localStorage.getItem("teamhub-theme");if(savedTheme==="dark")document.body.classList.add("dark");
 function updateThemeButton(){const dark=document.body.classList.contains("dark");themeToggle?.setAttribute("aria-pressed",String(dark));themeToggle?.setAttribute("aria-label",dark?"Désactiver le mode sombre":"Activer le mode sombre");}
 themeToggle?.addEventListener("click",()=>{const dark=document.body.classList.toggle("dark");localStorage.setItem("teamhub-theme",dark?"dark":"light");updateThemeButton();});
