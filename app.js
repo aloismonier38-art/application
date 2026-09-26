@@ -10,7 +10,7 @@ const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle"),themeToggle=$("#themeToggle");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
 const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",tasks:"To-do list",requests:"Besoins & interventions",reports:"Rapports hebdomadaires"};
-let authMode="login";
+let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 function dateLabel(v){return v?new Date(v+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):"—";}
@@ -57,7 +57,13 @@ async function authSubmitHandler(e){
   finally{authSubmit.disabled=false;}
 }
 authForm.addEventListener("submit",authSubmitHandler);
-authSwitch.addEventListener("click",()=>{setAuthMode(authMode==="login"?"signup":"login");});
+function toggleAuthMode(){
+  const next=authMode==="login"?"signup":"login";
+  window.__teamhubAuthMode=next;
+  setAuthMode(next);
+}
+authSwitch.addEventListener("click",toggleAuthMode);
+authSwitch.onclick=toggleAuthMode;
 authLogout.addEventListener("click",()=>supabase.auth.signOut());
 
 async function loadProfile(){
