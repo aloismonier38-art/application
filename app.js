@@ -66,7 +66,7 @@ function renderDashboard(){
 
 function renderDocuments(){
  content.innerHTML='<div class="section-title"><h2>Fiches techniques</h2>'+
- (can("document")?'<button class="btn" onclick="openModal("document")">+ Ajouter</button>':"")+
+ (can("document")?'<button class="btn" onclick="openModal('document')">+ Ajouter</button>':"")+
  '</div><div class="list">'+data.documents.map((d,i)=>
  '<div class="row doc-preview"><div class="pdf-icon">PDF</div><div><strong>'+d+'</strong><div class="muted">Version 1.'+(i+1)+' · Mise à jour récente</div></div>'+
  '<button class="preview-btn" onclick="alert(\'Aperçu de : '+d+'\')">Prévisualiser</button></div>'
@@ -81,7 +81,7 @@ function renderTasks(){
  const visible=state.taskFilter==="done"?doneToday:state.taskFilter==="all"?all:open;
  const days=["Lun 28","Mar 29","Mer 30","Jeu 1","Ven 2","Sam 3","Dim 4"];
  content.innerHTML='<div class="section-title"><div><h2>Tâches</h2><div class="muted">À faire, échéances et récurrences</div></div>'+
- (can("task")?'<button class="btn" onclick="openModal("task")">+ Nouvelle</button>':"")+'</div>'+
+ (can("task")?'<button class="btn" onclick="openModal('task')">+ Nouvelle</button>':"")+'</div>'+
  '<div class="task-filters">'+taskFilterButton("À faire","open")+taskFilterButton("Validées aujourd\'hui","done")+taskFilterButton("Toutes","all")+'</div>'+
  '<div class="task-summary"><span>'+open.length+' à faire</span><span>'+doneToday.length+' validée'+(doneToday.length>1?"s":"")+' aujourd\'hui</span></div>'+
  '<div class="list">'+(visible.length?visible.map(taskHtml).join(""):'<div class="empty">Aucune tâche dans cette vue.</div>')+'</div>'+
@@ -99,12 +99,12 @@ function renderTasks(){
 }
 
 function renderRequests(){
- content.innerHTML='<div class="section-title"><h2>Besoins & interventions</h2><button class="btn" onclick="openModal("request")">+ Nouveau besoin</button></div>'+
+ content.innerHTML='<div class="section-title"><h2>Besoins & interventions</h2><button class="btn" onclick="openModal('request')">+ Nouveau besoin</button></div>'+
  '<div class="list">'+data.requests.map(r=>'<div class="row"><div><strong>'+r[0]+'</strong><div class="muted">'+r[1]+'</div></div><span class="tag">'+r[2]+'</span></div>').join("")+'</div>';
 }
 function renderReports(){
  content.innerHTML='<div class="section-title"><h2>Rapports hebdomadaires</h2>'+
- (can("report")?'<button class="btn" onclick="openModal("report")">+ Nouveau rapport</button>':"")+'</div>'+
+ (can("report")?'<button class="btn" onclick="openModal('report')">+ Nouveau rapport</button>':"")+'</div>'+
  '<div class="empty">Aucun rapport n\'est encore enregistré.<br><span class="muted">Les indicateurs pourront ensuite être reliés aux données de tes établissements.</span></div>';
 }
 function render(){
