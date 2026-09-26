@@ -63,7 +63,6 @@ function toggleAuthMode(){
   setAuthMode(next);
 }
 authSwitch.addEventListener("click",toggleAuthMode);
-authSwitch.onclick=toggleAuthMode;
 authLogout.addEventListener("click",()=>supabase.auth.signOut());
 
 async function loadProfile(){
