@@ -1,3 +1,5 @@
+(function(){
+  'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
 function showFatal(message){
@@ -239,3 +241,5 @@ async function boot(){
 }
 window.startTeamHubApp=boot;
 updateThemeButton();
+
+})();
