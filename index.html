@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TeamHub — Application équipes</title>
-  <link rel="stylesheet" href="styles.css?v=23">
+  <link rel="stylesheet" href="styles.css?v=24">
 <style>
 .auth-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:20px;background:var(--cream)}
 .auth-gate[hidden]{display:none}#app[hidden]{display:none}
@@ -15,9 +15,35 @@
 </style>
 </head>
 <body>
-  <div id="authGate" class="auth-gate"><div class="auth-card"><div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div><h2 id="authTitle">Connexion</h2><p id="authMessage" class="muted">Connectez-vous pour accéder à votre équipe.</p><form id="authForm"><label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label><label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label><label<button class="btn" id="authSubmit">Se connecter</button></form><button class="auth-switch" id="authSwitch" type="button">Créer mon compte</button><div class="auth-build" style="text-align:center;margin-top:10px;font-size:10px;color:#748078">TeamHub 1.1.23</div><button class="auth-logout" id="authLogout" type="button" hidden>Se déconnecter</button></div></div>
-<div id="signupModal" class="signup-modal" hidden aria-hidden="true">
-  <div class="signup-backdrop" data-signup-close></div>
+  <div id="authGate" class="auth-gate">
+  <div class="auth-shell">
+    <div class="auth-brand-top"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div>
+    <div class="auth-panels">
+      <section class="auth-panel login-panel">
+        <span class="auth-kicker">ESPACE ÉQUIPE</span>
+        <h2>Connexion</h2>
+        <p class="auth-panel-text">Accédez à votre espace Pizza Cosy.</p>
+        <form id="authForm" class="auth-form">
+          <label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label>
+          <label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
+          <button class="btn" id="authSubmit" type="submit">Se connecter</button>
+        </form>
+        <p id="authMessage" class="auth-message">Connectez-vous pour accéder à votre équipe.</p>
+      </section>
+      <section class="auth-panel signup-panel">
+        <span class="auth-kicker">NOUVEAU MEMBRE</span>
+        <h2>Créer mon compte</h2>
+        <p class="auth-panel-text">Créez votre accès en quelques secondes.</p>
+        <form id="signupForm" class="auth-form">
+          <label>Email<input id="signupEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label>
+          <label>Mot de passe<input id="signupPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="6 caractères minimum"></label>
+          <button class="btn auth-signup-btn" id="signupSubmit" type="submit">Créer le compte</button>
+        </form>
+        <p class="auth-help">Votre profil et votre rôle seront associés à votre compte.</p>
+      </section>
+    </div>
+  </div>
+</div>
   <div class="signup-dialog" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
     <button class="signup-close" id="signupClose" type="button" aria-label="Fermer">×</button>
     <div class="brand auth-brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div>
@@ -50,7 +76,7 @@
     <main class="main">
       <header class="topbar">
         <div><span class="eyebrow">Équipe</span><h1 id="pageTitle">Tableau de bord</h1></div>
-        <div class="app-version">TeamHub 1.1.23</div><div class="top-actions"><span class="status-dot"></span><span>Connecté</span><button id="themeToggle" class="theme-toggle" aria-label="Activer le mode sombre"><span class="theme-switch"></span><span class="theme-label">Sombre</span></button><button id="roleToggle" class="role-toggle">Admin ▾</button></div>
+        <div class="top-actions"><span class="status-dot"></span><span>Connecté</span><div id="appVersion" class="app-version">TeamHub 1.1.24</div><button id="themeToggle" class="theme-toggle" aria-label="Activer le mode sombre"><span class="theme-switch"></span><span class="theme-label">Sombre</span></button><button id="roleToggle" class="role-toggle">Admin ▾</button></div>
       </header>
       <section id="content"></section>
     </main>
@@ -63,7 +89,7 @@
 </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="supabase-config.js?v=23"></script>
-  <script src="auth.js?v=23"></script>
+  <script src="supabase-config.js?v=24"></script>
+  <script src="auth.js?v=24"></script>
 </body>
 </html>
