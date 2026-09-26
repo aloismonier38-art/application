@@ -1,4 +1,5 @@
 let supabase;
+window.__teamhubAppScriptLoaded=true;
 function showFatal(message){
   const gate=document.getElementById("authGate");
   const msg=document.getElementById("authMessage");
