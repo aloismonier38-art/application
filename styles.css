@@ -196,3 +196,16 @@ body.dark .btn{
 body.dark .task-row .check{
   accent-color:#e38f9c;
 }
+
+/* DARK THEME FINAL OVERRIDES */
+html body.dark .sidebar{background:#12382d!important;color:#f1f6f3!important}
+html body.dark .sidebar *{color:inherit}
+html body.dark .sidebar .brand small,
+html body.dark .sidebar .user-card small{color:#b8cbc2!important}
+html body.dark .sidebar .nav-item{color:#dce8e2!important;background:transparent}
+html body.dark .sidebar .nav-item:hover,
+html body.dark .sidebar .nav-item.active{background:#1d493c!important;color:#fff!important}
+html body.dark .sidebar .nav-item.active .nav-icon{color:#e38f9c!important}
+html body.dark .sidebar .brand-mark{background:#f7faf8!important;color:#174235!important}
+html body.dark .sidebar .avatar{background:#31564b!important;color:#fff!important}
+html body.dark .sidebar .user-card{border-color:#2a5145!important}
