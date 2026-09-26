@@ -111,6 +111,16 @@ create policy documents_update on public.documents for update to authenticated
 using (public.is_manager() and (public.is_admin() or establishment_id = public.my_establishment()))
 with check (public.is_manager() and (public.is_admin() or establishment_id = public.my_establishment()));
 
+drop policy if exists documents_delete on public.documents;
+create policy documents_delete on public.documents for delete to authenticated
+using (
+  public.is_admin()
+  or (
+    public.is_manager()
+    and establishment_id = public.my_establishment()
+  )
+);
+
 drop policy if exists tasks_select on public.tasks;
 create policy tasks_select on public.tasks for select to authenticated
 using (public.is_admin() or establishment_id = public.my_establishment());
