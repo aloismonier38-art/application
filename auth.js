@@ -3,125 +3,136 @@
 
   const $=s=>document.querySelector(s);
   const gate=$("#authGate");
-  const form=$("#authForm");
-  const switchBtn=$("#authSwitch");
-  const title=$("#authTitle");
-  const message=$("#authMessage");
-  const submitButton=$("#authSubmit");
-  const nameWrap=$("#authNameWrap");
-  const nameInput=$("#authName");
+  const loginForm=$("#authForm");
+  const loginSwitch=$("#authSwitch");
+  const loginMessage=$("#authMessage");
+  const loginButton=$("#authSubmit");
   const logout=$("#authLogout");
 
-  let mode="login";
+  const signupModal=$("#signupModal");
+  const signupForm=$("#signupForm");
+  const signupClose=$("#signupClose");
+  const signupCancel=$("#signupCancel");
+  const signupMessage=$("#signupMessage");
+  const signupButton=$("#signupSubmit");
+
   let client=null;
   let appLoaded=false;
   let appLoading=false;
 
-  function setMessage(text,error=false){
-    if(message){
-      message.textContent=text;
-      message.style.color=error?"#b94d61":"";
-    }
+  function setLoginMessage(text,error=false){
+    if(loginMessage){loginMessage.textContent=text;loginMessage.style.color=error?"#b94d61":"";}
   }
-
-  function setMode(next){
-    mode=next;
-    const signup=mode==="signup";
-    if(title)title.textContent=signup?"Créer mon compte":"Connexion";
-    setMessage(signup
-      ?"Le premier compte créé devient administrateur. Les suivants sont salariés par défaut."
-      :"Connectez-vous pour accéder à votre équipe.");
-    if(submitButton)submitButton.textContent=signup?"Créer le compte":"Se connecter";
-    if(switchBtn)switchBtn.textContent=signup?"J’ai déjà un compte":"Créer mon compte";
-    if(nameWrap)nameWrap.hidden=!signup;
-    if(nameInput)nameInput.required=signup;
+  function setSignupMessage(text,error=false){
+    if(signupMessage){signupMessage.textContent=text;signupMessage.style.color=error?"#b94d61":"";}
   }
-
+  function openSignup(){
+    if(!signupModal)return;
+    signupModal.hidden=false;
+    signupModal.setAttribute("aria-hidden","false");
+    document.body.classList.add("signup-open");
+    setSignupMessage("Créez votre compte pour rejoindre l’équipe.");
+    setTimeout(()=>$("#signupName")?.focus(),0);
+  }
+  function closeSignup(){
+    if(!signupModal)return;
+    signupModal.hidden=true;
+    signupModal.setAttribute("aria-hidden","true");
+    document.body.classList.remove("signup-open");
+  }
   function showAuth(){
     if(gate)gate.hidden=false;
     document.body.classList.add("auth-open");
   }
-
   function hideAuth(){
     if(gate)gate.hidden=true;
     document.body.classList.remove("auth-open");
   }
-
   function showFatal(text){
     showAuth();
-    setMessage(text,true);
+    setLoginMessage(text,true);
   }
 
   function loadApp(){
     if(appLoaded||appLoading)return;
     appLoading=true;
     const script=document.createElement("script");
-    script.src="app.js?v=14";
+    script.src="app.js?v=16";
     script.onload=async()=>{
       appLoaded=true;
       appLoading=false;
-      if(typeof window.startTeamHubApp==="function"){
-        await window.startTeamHubApp();
-      }else{
-        showFatal("Le module TeamHub n’a pas pu démarrer.");
-      }
+      if(typeof window.startTeamHubApp==="function")await window.startTeamHubApp();
+      else showFatal("Le module TeamHub n’a pas pu démarrer.");
     };
-    script.onerror=()=>{
-      appLoading=false;
-      showFatal("Impossible de charger l’application TeamHub. Vérifiez la connexion puis rechargez.");
-    };
+    script.onerror=()=>{appLoading=false;showFatal("Impossible de charger l’application TeamHub.");};
     document.body.appendChild(script);
   }
 
   async function openSession(){
-    const {data,error}=await client.auth.getSession();
-    if(error)throw error;
-    if(data.session){
-      loadApp();
-    }else{
-      showAuth();
-      setMode("login");
-    }
+    const result=await client.auth.getSession();
+    if(result.error)throw result.error;
+    if(result.data.session)loadApp();
+    else showAuth();
   }
 
-  async function submit(e){
+  async function login(e){
     e.preventDefault();
-    if(!client)return showFatal("Le module de connexion n’est pas disponible.");
-    submitButton.disabled=true;
-    const email=$("#authEmail")?.value.trim()||"";
-    const password=$("#authPassword")?.value||"";
-    const fullName=nameInput?.value.trim()||"";
-
+    if(!client)return showFatal("La connexion à Supabase n’est pas disponible.");
+    loginButton.disabled=true;
     try{
-      if(mode==="signup"){
-        if(!fullName)throw new Error("Indiquez votre nom complet.");
-        const result=await client.auth.signUp({
-          email,
-          password,
-          options:{data:{full_name:fullName}}
-        });
-        if(result.error)throw result.error;
-        if(!result.data.session){
-          setMessage("Compte créé. Vérifiez votre e-mail avant de vous connecter.");
-          return;
-        }
+      const email=$("#authEmail")?.value.trim()||"";
+      const password=$("#authPassword")?.value||"";
+      const result=await client.auth.signInWithPassword({email,password});
+      if(result.error)throw result.error;
+      closeSignup();
+      hideAuth();
+      loadApp();
+    }catch(err){
+      console.error("TeamHub login error:",err);
+      setLoginMessage(err?.message||"Impossible de se connecter.",true);
+    }finally{loginButton.disabled=false;}
+  }
+
+  async function signup(e){
+    e.preventDefault();
+    if(!client){setSignupMessage("La connexion à Supabase n’est pas disponible.",true);return;}
+    signupButton.disabled=true;
+    try{
+      const name=$("#signupName")?.value.trim()||"";
+      const email=$("#signupEmail")?.value.trim()||"";
+      const password=$("#signupPassword")?.value||"";
+      const confirm=$("#signupPasswordConfirm")?.value||"";
+      if(password!==confirm)throw new Error("Les deux mots de passe ne correspondent pas.");
+      const result=await client.auth.signUp({email,password,options:{data:{full_name:name}}});
+      if(result.error)throw result.error;
+      if(result.data.session){
+        closeSignup();
         hideAuth();
         loadApp();
       }else{
-        const result=await client.auth.signInWithPassword({email,password});
-        if(result.error)throw result.error;
-        hideAuth();
-        loadApp();
+        setSignupMessage("Compte créé. Vérifiez votre e-mail puis connectez-vous.");
+        signupForm.reset();
       }
     }catch(err){
-      console.error("TeamHub authentication error:",err);
-      setMessage(err?.message||"Impossible de se connecter.",true);
-    }finally{
-      submitButton.disabled=false;
-    }
+      console.error("TeamHub signup error:",err);
+      setSignupMessage(err?.message||"Impossible de créer le compte.",true);
+    }finally{signupButton.disabled=false;}
   }
 
   async function init(){
+    // The signup window is deliberately bound before any Supabase check.
+    // The button must always open even if a backend is temporarily unavailable.
+    loginSwitch?.addEventListener("click",openSignup);
+    signupClose?.addEventListener("click",closeSignup);
+    signupCancel?.addEventListener("click",closeSignup);
+    signupModal?.addEventListener("click",e=>{if(e.target.matches("[data-signup-close]"))closeSignup();});
+    document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSignup();});
+    loginForm?.addEventListener("submit",login);
+    signupForm?.addEventListener("submit",signup);
+    logout?.addEventListener("click",()=>client?.auth.signOut());
+
+    showAuth();
+
     try{
       if(!window.supabase?.createClient)throw new Error("Le module Supabase n’a pas été chargé.");
       if(!window.TEAMHUB_SUPABASE_URL||!window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY)throw new Error("La configuration Supabase est manquante.");
@@ -133,22 +144,13 @@
       window.teamHubSupabase=client;
       window.teamHubShowAuth=showAuth;
       window.teamHubHideAuth=hideAuth;
-
-      form?.addEventListener("submit",submit);
-      switchBtn?.addEventListener("click",()=>setMode(mode==="login"?"signup":"login"));
-      logout?.addEventListener("click",()=>client.auth.signOut());
-
-      client.auth.onAuthStateChange((event)=>{
-        if(event==="SIGNED_OUT"){
-          showAuth();
-          setMode("login");
-        }
+      client.auth.onAuthStateChange(event=>{
+        if(event==="SIGNED_OUT"){showAuth();closeSignup();}
       });
-
       await openSession();
     }catch(err){
       console.error("TeamHub auth init error:",err);
-      showFatal(err?.message||"Impossible d’initialiser la connexion.");
+      setLoginMessage(err?.message||"Impossible d’initialiser la connexion.",true);
     }
   }
 
