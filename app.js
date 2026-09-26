@@ -218,7 +218,11 @@ async function boot(){
    await loadProfile();await loadData();
    showAuth(false);authLogout.hidden=false;render();
  }catch(err){
-   showAuth(true);authInfo("Base de données non configurée ou inaccessible. Exécutez le script database/schema.sql puis database/supabase_setup.sql dans Supabase.");console.error(err);
+   showAuth(true);
+   setAuthMode("login");
+   const detail=err?.message||err?.details||err?.hint||"Erreur inconnue";
+   authError("Erreur de chargement : "+detail);
+   console.error("TeamHub boot error:",err);
  }
 }
 supabase.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT"){showAuth(true);setAuthMode("login");}else if(event==="SIGNED_IN"){boot();}});
