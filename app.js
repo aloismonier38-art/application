@@ -14,7 +14,7 @@ const data={
 };
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
-const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle");
+const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle"),themeToggle=$("#themeToggle");
 const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",tasks:"To-do list",requests:"Besoins & interventions",reports:"Rapports hebdomadaires"};
 
 function dateLabel(v){return new Date(v+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"});}
@@ -119,5 +119,20 @@ document.addEventListener("submit",e=>{
  if(type==="report")state.view="reports";
  closeModal();render();
 });
+const savedTheme=localStorage.getItem("teamhub-theme");
+if(savedTheme==="dark")document.body.classList.add("dark");
+function updateThemeButton(){
+  const dark=document.body.classList.contains("dark");
+  if(themeToggle){
+    themeToggle.setAttribute("aria-pressed",String(dark));
+    themeToggle.setAttribute("aria-label",dark?"Désactiver le mode sombre":"Activer le mode sombre");
+  }
+}
+themeToggle?.addEventListener("click",()=>{
+  const dark=document.body.classList.toggle("dark");
+  localStorage.setItem("teamhub-theme",dark?"dark":"light");
+  updateThemeButton();
+});
 roleToggle.addEventListener("click",()=>{state.role=state.role==="admin"?"manager":state.role==="manager"?"employee":"admin";render();});
+updateThemeButton();
 render();
