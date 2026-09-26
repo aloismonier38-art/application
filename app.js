@@ -226,13 +226,22 @@ async function boot(){
     const {data:{session}}=await supabase.auth.getSession();
     if(!session){showAuth(true);return;}
 
-    await loadProfile();
-
-    // Render the application immediately after authentication.
-    // Data loading must never leave a blank screen.
+    // Never leave the app blank while the profile request is pending.
     showAuth(false);
     if(authLogout)authLogout.hidden=false;
     render();
+
+    try{
+      await Promise.race([
+        loadProfile(),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error("Le profil met trop de temps à charger.")),6000))
+      ]);
+      render();
+    }catch(profileError){
+      console.error("CosyHub profile loading error:",profileError);
+      state.role="employee";
+      render();
+    }
 
     try{
       await Promise.race([
