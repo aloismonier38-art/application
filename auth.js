@@ -7,7 +7,7 @@
   const switchBtn=$("#authSwitch");
   const title=$("#authTitle");
   const message=$("#authMessage");
-  const submit=$("#authSubmit");
+  const submitButton=$("#authSubmit");
   const nameWrap=$("#authNameWrap");
   const nameInput=$("#authName");
   const logout=$("#authLogout");
@@ -31,7 +31,7 @@
     setMessage(signup
       ?"Le premier compte créé devient administrateur. Les suivants sont salariés par défaut."
       :"Connectez-vous pour accéder à votre équipe.");
-    if(submit)submit.textContent=signup?"Créer le compte":"Se connecter";
+    if(submitButton)submitButton.textContent=signup?"Créer le compte":"Se connecter";
     if(switchBtn)switchBtn.textContent=signup?"J’ai déjà un compte":"Créer mon compte";
     if(nameWrap)nameWrap.hidden=!signup;
     if(nameInput)nameInput.required=signup;
@@ -87,7 +87,7 @@
   async function submit(e){
     e.preventDefault();
     if(!client)return showFatal("Le module de connexion n’est pas disponible.");
-    submit.disabled=true;
+    submitButton.disabled=true;
     const email=$("#authEmail")?.value.trim()||"";
     const password=$("#authPassword")?.value||"";
     const fullName=nameInput?.value.trim()||"";
@@ -117,7 +117,7 @@
       console.error("TeamHub authentication error:",err);
       setMessage(err?.message||"Impossible de se connecter.",true);
     }finally{
-      submit.disabled=false;
+      submitButton.disabled=false;
     }
   }
 
@@ -152,5 +152,5 @@
     }
   }
 
-  window.addEventListener("DOMContentLoaded",init,{once:true});
+  if(document.readyState==="loading")window.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
