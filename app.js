@@ -222,7 +222,10 @@ const savedTheme=localStorage.getItem("teamhub-theme");if(savedTheme==="dark")do
 function updateThemeButton(){const dark=document.body.classList.contains("dark");themeToggle?.setAttribute("aria-pressed",String(dark));themeToggle?.setAttribute("aria-label",dark?"Désactiver le mode sombre":"Activer le mode sombre");}
 themeToggle?.addEventListener("click",()=>{const dark=document.body.classList.toggle("dark");localStorage.setItem("teamhub-theme",dark?"dark":"light");updateThemeButton();});
 
-let booting=false;\nasync function boot(){\n if(booting)return;\n booting=true;
+let booting=false;
+async function boot(){
+  if(booting)return;
+  booting=true;
  try{
    const {data:{session}}=await supabase.auth.getSession();
    if(!session){showAuth(true);return;}
