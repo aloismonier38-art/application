@@ -52,34 +52,6 @@ function setAuthMode(mode){
 function authError(msg){authMessage.textContent=msg;authMessage.style.color="#b94d61";}
 function authInfo(msg){authMessage.textContent=msg;authMessage.style.color="";}
 
-async function authSubmitHandler(e){
-  e.preventDefault();
-  authSubmit.disabled=true;
-  const email=$("#authEmail").value.trim(),password=$("#authPassword").value,name=authName.value.trim();
-  try{
-    if(authMode==="signup"){
-      const {data:res,error}=await supabase.auth.signUp({email,password,options:{data:{full_name:name}}});
-      if(error)throw error;
-      if(!res.session)authInfo("Compte créé. Vérifiez votre e-mail si Supabase demande une confirmation, puis connectez-vous.");
-      else await boot();
-    }else{
-      const {error}=await supabase.auth.signInWithPassword({email,password});
-      if(error)throw error;
-      await boot();
-    }
-  }catch(err){authError(err.message||"Impossible de se connecter.");}
-  finally{authSubmit.disabled=false;}
-}
-authForm.addEventListener("submit",authSubmitHandler);
-function toggleAuthMode(){
-  const next=authMode==="login"?"signup":"login";
-  window.__teamhubAuthMode=next;
-  setAuthMode(next);
-}
-authSwitch.addEventListener("click",toggleAuthMode);
-window.__teamhubAuthBound=true;
-authLogout.addEventListener("click",()=>supabase.auth.signOut());
-
 async function loadProfile(){
   const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",(await supabase.auth.getUser()).data.user.id).single();
   if(error)throw error;
@@ -244,5 +216,5 @@ async function boot(){
    booting=false;
  }
 }
-supabase.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT"){showAuth(true);setAuthMode("login");}else if(event==="SIGNED_IN"){boot();}});
-setAuthMode("login");updateThemeButton();boot();
+window.startTeamHubApp=boot;
+updateThemeButton();
