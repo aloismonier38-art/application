@@ -259,3 +259,6 @@ body.auth-open .app-version{bottom:10px}
 
 .auth-brand-top{overflow:visible!important}
 .auth-brand-top .cosyhub-logo-main{display:block!important;width:96px!important;height:91px!important;max-width:none!important;max-height:none!important;object-fit:contain!important;object-position:center!important;flex:0 0 96px!important}
+
+/* v1.1.31 - logos removed */
+.auth-brand-top{gap:0!important}
