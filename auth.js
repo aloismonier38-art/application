@@ -24,7 +24,7 @@
     if(appLoaded||appLoading)return;
     appLoading=true;
     const script=document.createElement("script");
-    script.src="app.js?v=30";
+    script.src="app.js?v=34";
     script.onload=async()=>{
       appLoaded=true;appLoading=false;
       if(typeof window.startCosyHubApp==="function"){
