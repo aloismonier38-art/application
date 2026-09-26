@@ -29,7 +29,7 @@
     }
     appLoading=true;
     const script=document.createElement("script");
-    script.src="app.js?v=37";
+    script.src="app.js?v=39";
     script.onload=async()=>{
       appLoaded=true;appLoading=false;
       if(typeof window.startCosyHubApp==="function"){
