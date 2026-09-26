@@ -11,3 +11,10 @@
 .bottom-nav button.active{color:var(--green)}
 .bottom-nav button.active .bottom-icon{color:var(--pink)}
 @media(max-width:850px){.nav-icon{width:20px}.bottom-nav button{gap:2px}.bottom-icon{width:24px;height:24px}.bottom-nav button span:last-child{font-size:10px}}
+
+/* Tâche validée : aspect Rappels Apple */
+.task-row.task-done{opacity:.58;background:#f2f2f0}
+.task-row.task-done .task-main strong{text-decoration:line-through;color:#7b817d}
+.task-row.task-done .muted{text-decoration:line-through;color:#9aa09c}
+.task-row.task-done .tag{filter:grayscale(1);opacity:.7}
+.task-row.task-done .check{accent-color:#7d8580}
