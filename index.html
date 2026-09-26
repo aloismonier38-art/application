@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TeamHub — Application équipes</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">T</span><div><strong>TeamHub</strong><small>Gestion des équipes</small></div></div>
+      <nav>
+        <button class="nav-item active" data-view="dashboard">Tableau de bord</button>
+        <button class="nav-item" data-view="documents">Fiches techniques</button>
+        <button class="nav-item" data-view="tasks">To-do list</button>
+        <button class="nav-item" data-view="requests">Besoins & interventions</button>
+        <button class="nav-item" data-view="reports">Rapports hebdomadaires</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="user-card"><div class="avatar">AM</div><div><strong>Aloïs Monier</strong><small id="roleLabel">Administrateur</small></div></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div><span class="eyebrow">Équipe</span><h1 id="pageTitle">Tableau de bord</h1></div>
+        <div class="top-actions"><span class="status-dot"></span><span>Connecté</span><button id="roleToggle" class="role-toggle">Admin ▾</button></div>
+      </header>
+      <section id="content"></section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
