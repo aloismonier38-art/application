@@ -270,3 +270,6 @@ body.dark .settings-form label{color:#b8c5bf}body.dark .settings-form input{back
 
 /* CosyHub 1.1.44 — bouton paramètres texte */
 .settings-button{display:inline-flex!important;align-items:center;justify-content:center;gap:6px;padding:8px 13px!important;min-width:auto!important;font-size:14px!important;font-weight:700!important}.settings-button svg{display:none}.settings-button span{display:inline}@media(max-width:850px){.settings-button{padding:8px 13px!important}.settings-button span{display:inline}}
+
+/* CosyHub 1.1.45 — version uniquement connexion + paramètres */
+.auth-version{position:fixed!important;right:14px!important;bottom:10px!important;z-index:2000!important}.settings-version{position:fixed!important;right:14px!important;bottom:74px!important;z-index:2000!important}.app-version{pointer-events:none!important}@media(max-width:700px){.auth-version{right:10px!important;bottom:10px!important}.settings-version{right:10px!important;bottom:74px!important}}
