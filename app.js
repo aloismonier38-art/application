@@ -27,7 +27,7 @@ const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
-const titles={dashboard:"Tableau de bord",tasks:"Tâches",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
+const titles={dashboard:"Tableau de bord",tasks:"Tâches",requests:"Demandes",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
@@ -162,16 +162,19 @@ async function loadUsers(){
   data.users=users||[];
 }
 async function loadData(){
-  const [documents,tasks,people]=await Promise.all([
+  const [documents,tasks,requests,people]=await Promise.all([
     supabase.from("documents").select("*").order("updated_at",{ascending:false}),
     supabase.from("tasks").select("*").order("due_date",{ascending:true}).order("created_at",{ascending:false}),
+    supabase.from("requests").select("*").order("created_at",{ascending:false}),
     supabase.from("profiles").select("id,full_name,is_active").eq("is_active",true).order("full_name",{ascending:true})
   ]);
   if(documents.error)throw documents.error;
   if(tasks.error)throw tasks.error;
+  if(requests.error)throw requests.error;
   if(people.error)throw people.error;
   data.documents=documents.data||[];
   data.tasks=tasks.data||[];
+  data.requests=requests.data||[];
   data.taskPeople=people.data||[];
   await loadUsers();
 }
@@ -187,9 +190,13 @@ function taskCard(t){
 function renderDashboard(){
   const role=roleText(state.role);
   const userCount=state.role==="admin"?data.users.length:"—";
+  const openTasks=data.tasks.filter(t=>t.status!=="done").length;
+  const openRequests=data.requests.filter(r=>!["resolved","closed"].includes(r.status)).length;
   content.innerHTML='<div class="grid">'+
+    '<div class="card"><div class="stat-label">Tâches à faire</div><div class="stat-value">'+openTasks+'</div><div class="stat-note">Travail en cours</div></div>'+
+    '<div class="card"><div class="stat-label">Demandes ouvertes</div><div class="stat-value">'+openRequests+'</div><div class="stat-note">Besoins à traiter</div></div>'+
     '<div class="card"><div class="stat-label">Fiches techniques</div><div class="stat-value">'+data.documents.length+'</div><div class="stat-note">Documents disponibles</div></div>'+
-    '<div class="card"><div class="stat-label">Membres de l’équipe</div><div class="stat-value">'+userCount+'</div><div class="stat-note">'+(state.role==="admin"?"Comptes gérés":"Accès à votre espace")+'</div></div>'+
+    (state.role==="admin"?'<div class="card"><div class="stat-label">Membres</div><div class="stat-value">'+userCount+'</div><div class="stat-note">Comptes gérés</div></div>':"")+
     '</div>'+
     '<div class="section-title"><div><h2>Bienvenue sur PIZZA COSY</h2><div class="muted">Espace d’équipe</div></div></div>'+
     '<div class="card dashboard-welcome"><strong>Votre espace est prêt.</strong><p class="muted">Retrouvez ici les fiches techniques et, selon vos droits, la gestion des accès et les paramètres.</p><div class="dashboard-role"><span class="tag">'+esc(role)+'</span></div></div>';
@@ -294,7 +301,7 @@ function renderSettings(){
 }
 function render{
  pageTitle.textContent=titles[state.view];
- ({dashboard:renderDashboard,documents:renderDocuments,access:renderAccess,settings:renderSettings}[state.view]||renderDashboard)();
+ ({dashboard:renderDashboard,tasks:renderTasks,requests:renderRequests,documents:renderDocuments,access:renderAccess,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
  if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
