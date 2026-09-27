@@ -262,3 +262,23 @@ $$;
 revoke update on table public.tasks from authenticated;
 revoke execute on function public.complete_task(uuid,boolean) from public, anon;
 grant execute on function public.complete_task(uuid,boolean) to authenticated;
+
+
+-- Lecture sécurisée du profil courant.
+-- Le profil est lu via une fonction SECURITY DEFINER afin que
+-- l'authentification ne dépende pas d'une policy RLS récursive.
+
+create or replace function public.get_my_profile()
+returns public.profiles
+language sql
+security definer
+set search_path = ''
+as $$
+  select p
+  from public.profiles p
+  where p.id = auth.uid()
+  limit 1;
+$$;
+
+revoke execute on function public.get_my_profile() from public, anon;
+grant execute on function public.get_my_profile() to authenticated;
