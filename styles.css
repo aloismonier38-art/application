@@ -532,3 +532,25 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
 /* Première connexion */
 .first-login-backdrop{z-index:300}.first-login-card{width:min(480px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;padding:30px;box-shadow:0 30px 90px rgba(23,66,53,.22);color:var(--green)}.first-login-icon{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--pink-light);color:var(--green);font-weight:800;margin-bottom:16px}.first-login-card h2{margin:0;font-size:24px}.first-login-intro{margin:7px 0 22px;color:var(--muted);font-size:13px}.first-login-form{display:grid;gap:13px}.first-login-form label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#53645c}.first-login-form input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:#fff;color:var(--green);font:inherit}.first-login-form input:focus{outline:2px solid rgba(227,143,156,.28);border-color:#d9a0aa}.first-login-form .btn{margin-top:5px}.first-login-form .user-modal-message{text-align:left;margin:0}.first-login-form .user-modal-message:empty{display:none}
 @media(max-width:600px){.first-login-backdrop{padding:10px;align-items:end}.first-login-card{padding:22px 18px;border-radius:20px 20px 12px 12px}}
+
+
+/* Auth — récupération du mot de passe */
+.auth-forgot{
+  border:0;
+  background:transparent;
+  color:var(--green);
+  cursor:pointer;
+  font:inherit;
+  font-size:12px;
+  font-weight:650;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  padding:2px 0;
+}
+.auth-forgot:hover{color:var(--pink)}
+.auth-forgot:disabled{opacity:.55;cursor:wait}
+
+/* Dashboard */
+.dashboard-welcome{padding:22px 24px}
+.dashboard-welcome p{margin:7px 0 0;max-width:680px;line-height:1.6}
+.dashboard-role{margin-top:16px}
