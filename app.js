@@ -273,7 +273,7 @@ async function openPreview(id){
           if(bar)bar.style.width=percent+"%";
           if(label)label.textContent=percent+" %";
           if(status)status.textContent="Téléchargement du PDF…";
-          document.body.classList.remove("pdf-loader-indeterminate");
+          if(track)track.classList.remove("pdf-loader-indeterminate");
         }else{
           if(track)track.classList.add("pdf-loader-indeterminate");
           if(status)status.textContent="Téléchargement du PDF…";
