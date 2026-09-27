@@ -20,7 +20,7 @@ if(!window.TEAMHUB_SUPABASE_URL || !window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY){
 }
 supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 
-const APP_VERSION="1.1.68";
+const APP_VERSION="1.1.69";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
 const data={tasks:[],documents:[],requests:[],reports:[],users:[]};
 const $=s=>document.querySelector(s);
