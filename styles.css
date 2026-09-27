@@ -468,3 +468,8 @@ body.dark .doc-preview.drag-over{border-color:#e38f9c;background:#292220}
     align-self:start;
   }
 }
+
+
+/* PIZZA COSY 1.1.60 — version affichée uniquement à côté du nom */
+.app-version-inline{display:inline-block;margin-left:5px;font-size:9px;line-height:1;font-weight:500;letter-spacing:.02em;opacity:.65;vertical-align:middle}
+.auth-brand-top .app-version-inline{font-size:9px;color:var(--muted)}
