@@ -721,3 +721,35 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
   outline:2px solid #E38F9C;
   outline-offset:2px;
 }
+
+
+/* PIZZA COSY — badge PDF mieux centré */
+.document-list .pdf-icon{
+  align-self:center!important;
+  justify-self:center!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box;
+  position:relative;
+  margin:0!important;
+  background:#fff!important;
+  border:1px solid #d8ddd9;
+  color:var(--green);
+  font-size:10px!important;
+  font-weight:800;
+  letter-spacing:.04em;
+  line-height:1!important;
+  box-shadow:0 2px 5px rgba(23,66,53,.06);
+}
+.document-list .pdf-icon::before{
+  content:"";
+  position:absolute;
+  inset:5px;
+  border:1px solid #e5e2dc;
+  border-radius:4px;
+  pointer-events:none;
+}
+.document-list .pdf-icon{
+  text-indent:0;
+}
