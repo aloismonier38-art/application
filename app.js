@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// PIZZA COSY 1.1.56 — correction du bouton paramètres supprimé.
+// PIZZA COSY 1.1.57 — correction définitive du chargement.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -24,7 +24,7 @@ const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
 const data={tasks:[],documents:[],requests:[],reports:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
-const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle"),sidebarUserName=$("#sidebarUserName");
+const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
 const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",reports:"Rapports hebdomadaires",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
@@ -191,7 +191,7 @@ function render(){
  ({dashboard:renderDashboard,documents:renderDocuments,reports:renderReports,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
- roleToggle.textContent="Paramètres"; if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
+ if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
 }
 
 function closeModal(){const m=$("#appModal");if(m)m.remove();}
