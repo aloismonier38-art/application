@@ -244,3 +244,7 @@ drop trigger if exists sync_profile_email on auth.users;
 create trigger sync_profile_email
 after update of email on auth.users
 for each row execute procedure public.sync_profile_login_email();
+
+
+-- Première connexion : l'utilisateur invité doit définir son mot de passe
+alter table public.profiles add column if not exists must_set_password boolean not null default false;
