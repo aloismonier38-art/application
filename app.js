@@ -69,7 +69,7 @@ async function handleLogin(e){
   e.preventDefault();
   if(!authSubmit)return;
   authSubmit.disabled=true;
-  authInfo("Connexion en cours…");
+  authInfo("Connexion à PIZZA COSY…");
   try{
     const email=$("#authEmail")?.value.trim()||"";
     const password=$("#authPassword")?.value||"";
@@ -77,23 +77,23 @@ async function handleLogin(e){
 
     const {data:loginData,error}=await supabase.auth.signInWithPassword({email,password});
     if(error)throw error;
-    if(!loginData?.session)throw new Error("Connexion non confirmée par Supabase.");
+    if(!loginData?.session)throw new Error("Supabase n’a pas retourné de session.");
 
-    // Le boot automatique de la page peut encore être en cours au moment
-    // où l'utilisateur clique sur Connexion. On attend sa fin avant de
-    // relancer le chargement de l'espace.
-    let wait=0;
-    while(booting && wait<60){
-      await new Promise(resolve=>setTimeout(resolve,100));
-      wait++;
-    }
+    authInfo("Session validée. Chargement du profil…");
+    await loadProfile();
+
+    authInfo("Profil validé. Chargement de votre espace…");
+    await loadData();
 
     showAuth(false);
-    await boot();
+    if(authLogout)authLogout.hidden=false;
+    render();
+
+    if(state.profile?.must_set_password)openFirstLoginModal();
   }catch(err){
     console.error("PIZZA COSY login error:",err);
     showAuth(true);
-    authError(err?.message||"Impossible de se connecter.");
+    authError("Connexion impossible : "+(err?.message||String(err)||"Erreur inconnue"));
   }finally{
     authSubmit.disabled=false;
   }
