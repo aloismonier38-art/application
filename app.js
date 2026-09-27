@@ -22,12 +22,12 @@ supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB
 
 const APP_VERSION="1.1.66";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
-const data={tasks:[],documents:[],requests:[],reports:[]};
+const data={tasks:[],documents:[],requests:[],reports:[],users:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
-const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",reports:"Rapports hebdomadaires",settings:"Paramètres"};
+const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",reports:"Rapports hebdomadaires",access:"Accès",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
@@ -114,6 +114,12 @@ async function loadProfile(){
   state.profile={...profile,email:user.email||""};
   state.role=profile.role;
 }
+async function loadUsers(){
+  if(state.role!=="admin"){data.users=[];return;}
+  const {data:users,error}=await supabase.from("profiles").select("id,full_name,role,phone,login_email,is_active").order("full_name",{ascending:true});
+  if(error)throw error;
+  data.users=users||[];
+}
 async function loadData(){
   // L’interface actuelle n’utilise plus les tâches ni les demandes.
   // Ne pas les charger ici : une erreur RLS sur une ancienne table ne doit pas
@@ -126,6 +132,7 @@ async function loadData(){
   if(reports.error)throw reports.error;
   data.documents=documents.data||[];
   data.reports=reports.data||[];
+  await loadUsers();
 }
 
 function taskCard(t){
@@ -166,6 +173,22 @@ function renderRequests(){
  content.innerHTML='<div class="section-title"><h2>Besoins & interventions</h2><button class="btn" data-modal="request">+ Nouveau besoin</button></div>'+
  '<div class="list">'+(data.requests.length?data.requests.map(r=>'<div class="row"><div><strong>'+esc(r.title)+'</strong><div class="muted">'+esc(r.kind)+' · '+esc(priorityLabel(r.priority))+'</div></div><span class="tag">'+esc(r.status)+'</span></div>').join(""):'<div class="empty">Aucune demande.</div>')+'</div>';
 }
+function renderAccess(){
+  if(state.role!=="admin"){content.innerHTML='<div class="empty">Cette rubrique est réservée aux administrateurs.</div>';return;}
+  content.innerHTML='<div class="section-title"><div><h2>Accès</h2><div class="muted">Gérez les comptes et leurs profils d’accès.</div></div><button class="btn" data-user-add>+ Ajouter un accès</button></div>'+
+  '<div class="list access-list">'+(data.users.length?data.users.map(u=>'<div class="row access-row"><div class="access-person"><div class="settings-avatar">'+esc((u.full_name||"?").split(/\\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase())+'</div><div><strong>'+esc(u.full_name||"Sans nom")+'</strong><div class="muted">'+esc(u.phone||"Téléphone non renseigné")+' · '+esc(u.login_email||"E-mail non renseigné")+'</div></div></div><div class="access-meta"><span class="tag">'+esc(roleText(u.role))+'</span><span class="access-status '+(u.is_active!==false?"active":"inactive")+'">'+(u.is_active!==false?"Actif":"Désactivé")+'</span><button class="btn-secondary" type="button" data-user-edit="'+esc(u.id)+'">Modifier</button></div></div>').join(""):'<div class="empty">Aucun compte utilisateur.</div>')+'</div>';
+}
+
+function openUserModal(user){
+  closeModal();
+  const u=user||{id:"",full_name:"",phone:"",login_email:"",role:"employee",is_active:true};
+  const editing=!!user;
+  document.body.insertAdjacentHTML("beforeend",'<div id="appModal" class="modal-backdrop"><div class="modal-card"><button class="modal-close" data-close>×</button><h3>'+(editing?"Modifier le compte":"Ajouter un accès")+'</h3><p class="muted">Informations et profil d’accès.</p><form id="userAccessForm" class="settings-form"><label>Nom et prénom<input name="full_name" required value="'+esc(u.full_name||"")+'"></label><label>Numéro de téléphone<input name="phone" type="tel" value="'+esc(u.phone||"")+'" placeholder="06 00 00 00 00"></label><label>E-mail de connexion<input name="login_email" type="email" required value="'+esc(u.login_email||"")+'" '+(editing?"readonly":"")+'></label><label>Profil d’accès<select name="role"><option value="employee" '+(u.role==="employee"?"selected":"")+'>Salarié</option><option value="manager" '+(u.role==="manager"?"selected":"")+'>Manager</option><option value="admin" '+(u.role==="admin"?"selected":"")+'>Administrateur</option></select></label><label class="check-line"><input name="is_active" type="checkbox" '+(u.is_active!==false?"checked":"")+'> Compte actif</label>'+(editing?'<button type="button" class="btn-secondary" data-reset-user="'+esc(u.id)+'">Envoyer un lien de réinitialisation du mot de passe</button>':"")+'<div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn" type="submit">Enregistrer</button></div><p id="userAccessMessage" class="muted"></p></form></div></div>');
+  $("#userAccessForm")?.addEventListener("submit",async e=>{
+    e.preventDefault();const fd=new FormData(e.target);const fields={full_name:String(fd.get("full_name")||"").trim(),phone:String(fd.get("phone")||"").trim(),login_email:String(fd.get("login_email")||"").trim(),role:String(fd.get("role")||"employee"),is_active:fd.get("is_active")==="on"};const msg=$("#userAccessMessage");
+    try{if(!editing){msg.textContent="Pour créer un nouveau compte de connexion, utilisez la création de compte Supabase. Le compte pourra ensuite être géré ici.";return;}const {error}=await supabase.from("profiles").update(fields).eq("id",u.id);if(error)throw error;await loadData();render();closeModal();}catch(err){if(msg)msg.textContent=err.message||"Impossible d’enregistrer.";}
+  });
+}
 function renderSettings(){
   const p=state.profile||{};
   const email=state.profile?.email||"";
@@ -188,7 +211,7 @@ function renderReports(){
 
 function render(){
  pageTitle.textContent=titles[state.view];
- ({dashboard:renderDashboard,documents:renderDocuments,reports:renderReports,settings:renderSettings}[state.view]||renderDashboard)();
+ ({dashboard:renderDashboard,documents:renderDocuments,reports:renderReports,access:renderAccess,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
  if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
@@ -396,6 +419,9 @@ async function openModal(type){
 document.addEventListener("click",async e=>{
  const close=e.target.closest("[data-close]");if(close){closeModal();return;}
  const nav=e.target.closest("[data-view]");if(nav){state.view=nav.dataset.view;render();return;}
+ const userAdd=e.target.closest("[data-user-add]");if(userAdd){openUserModal(null);return;}
+ const userEdit=e.target.closest("[data-user-edit]");if(userEdit){openUserModal(data.users.find(u=>u.id===userEdit.dataset.userEdit));return;}
+ const resetUser=e.target.closest("[data-reset-user]");if(resetUser){const u=data.users.find(x=>x.id===resetUser.dataset.resetUser);if(u?.login_email){const {error}=await supabase.auth.resetPasswordForEmail(u.login_email,{redirectTo:window.location.origin+window.location.pathname});alert(error?error.message:"Lien de réinitialisation envoyé.");}return;}
  const modal=e.target.closest("[data-modal]");if(modal){openModal(modal.dataset.modal).catch(err=>alert("Impossible d’ouvrir le formulaire : "+(err?.message||"Erreur inconnue")));return;}
  const filter=e.target.closest("[data-filter]");if(filter){state.taskFilter=filter.dataset.filter;renderTasks();return;}
  const preview=e.target.closest("[data-preview]");if(preview){await openPreview(preview.dataset.preview);return;}
