@@ -197,3 +197,68 @@ create index if not exists profiles_establishment_idx
 
 create index if not exists tasks_assigned_to_status_idx
   on public.tasks(assigned_to, status);
+
+
+-- Validation des tâches par RPC : un salarié ne peut pas modifier arbitrairement une tâche.
+create or replace function public.complete_task(
+  p_task_id uuid,
+  p_done boolean
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_establishment uuid;
+  target_assignee uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Non authentifié.';
+  end if;
+
+  select establishment_id, assigned_to
+    into target_establishment, target_assignee
+  from public.tasks
+  where id = p_task_id
+  for update;
+
+  if target_establishment is null then
+    raise exception 'Tâche introuvable.';
+  end if;
+
+  if not (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid()
+        and role in ('admin'::public.user_role,'manager'::public.user_role)
+        and (
+          role = 'admin'::public.user_role
+          or establishment_id = target_establishment
+        )
+        and is_active = true
+    )
+    or target_assignee = auth.uid()
+  ) then
+    raise exception 'Vous ne pouvez pas modifier cette tâche.';
+  end if;
+
+  update public.tasks
+  set
+    status = case when p_done then 'done'::public.task_status else 'todo'::public.task_status end,
+    completed_at = case when p_done then now() else null end,
+    updated_at = now()
+  where id = p_task_id;
+
+  if p_done then
+    insert into public.task_completions(task_id, completed_by)
+    values (p_task_id, auth.uid());
+  end if;
+
+  return true;
+end;
+$$;
+
+revoke update on table public.tasks from authenticated;
+revoke execute on function public.complete_task(uuid,boolean) from public, anon;
+grant execute on function public.complete_task(uuid,boolean) to authenticated;
