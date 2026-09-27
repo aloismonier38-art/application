@@ -214,7 +214,9 @@ function setUploadProgress(percent,text){
   if(!wrap)return;
   wrap.hidden=false;
   if(bar)bar.style.width=Math.max(0,Math.min(100,percent))+"%";
-  if(label)label.textContent=text||("Upload "+Math.round(percent)+" %");
+  if(label)label.textContent=text||("Téléversement "+Math.round(percent)+" %");
+  const value=wrap.querySelector(".upload-progress-head strong");
+  if(value)value.textContent=Math.round(percent)+" %";
 }
 async function uploadDocumentWithProgress(path,file){
   const {data:{session},error}=await supabase.auth.getSession();
