@@ -38,6 +38,19 @@ function can(a){return state.role==="admin"||(state.role==="manager"&&["task","d
 function priorityLabel(v){return ({normal:"Normale",high:"Haute",urgent:"Urgente"})[v]||v;}
 function priorityValue(v){return ({Normale:"normal",Haute:"high",Urgente:"urgent"})[v]||"normal";}
 function roleText(v){return ({admin:"Administrateur",manager:"Manager",employee:"Salarié"})[v]||"Salarié";}
+function splitPersonName(fullName){
+  const parts=String(fullName||"").trim().split(/\s+/).filter(Boolean);
+  if(parts.length<2)return {firstName:parts[0]||"",lastName:""};
+  if(parts[0]===parts[0].toUpperCase() && /[A-ZÀ-ÖØ-Þ]/.test(parts[0])) return {firstName:parts.slice(1).join(" "),lastName:parts[0]};
+  return {firstName:parts.slice(0,-1).join(" "),lastName:parts.at(-1)};
+}
+function formatPersonName(firstName,lastName){
+  return String(firstName||"").trim()+" "+String(lastName||"").trim().toLocaleUpperCase("fr-FR");
+}
+function initialsForName(fullName){
+  const n=splitPersonName(fullName);
+  return ((n.firstName[0]||"")+(n.lastName[0]||"")).toUpperCase()||"?";
+}
 
 function showAuth(show=true){
   authGate.hidden=!show;
@@ -173,12 +186,12 @@ function openUserModal(user){
   closeModal();
   const u=user||{id:"",full_name:"",phone:"",login_email:"",role:"employee",is_active:true};
   const editing=!!user;
-  const initials=(u.full_name||"Nouvel accès").split(/\\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
+  const person=splitPersonName(u.full_name); const initials=initialsForName(u.full_name);
   document.body.insertAdjacentHTML("beforeend",'<div id="appModal" class="modal-backdrop user-modal-backdrop"><div class="user-modal-card">'+
     '<div class="user-modal-head"><div class="user-modal-identity"><div class="user-modal-avatar">'+esc(initials)+'</div><div><span class="user-modal-kicker">ACCÈS ÉQUIPE</span><h3>'+(editing?"Modifier le compte":"Ajouter un accès")+'</h3><p>'+(editing?"Modifiez les informations et les droits de cet utilisateur.":"Créez un nouvel accès à l’espace équipe.")+'</p></div></div><button class="modal-close" data-close aria-label="Fermer">×</button></div>'+
     '<form id="userAccessForm" class="user-modal-form">'+
       '<div class="user-form-grid">'+
-        '<label>Nom et prénom<input name="full_name" required value="'+esc(u.full_name||"")+'" placeholder="Ex. Jean Dupont"></label>'+
+        '<label>Prénom<input name="first_name" required value="'+esc(person.firstName)+'" placeholder="Ex. Jean"></label><label>Nom<input name="last_name" required value="'+esc(person.lastName)+'" placeholder="Ex. DUPONT"></label>'+
         '<label>Numéro de téléphone<input name="phone" type="tel" value="'+esc(u.phone||"")+'" placeholder="06 00 00 00 00"></label>'+
         '<label class="full-field">E-mail de connexion<input name="login_email" type="email" required value="'+esc(u.login_email||"")+'" '+(editing?"readonly":"")+' placeholder="prenom@exemple.fr"></label>'+
         '<label>Profil d’accès<select name="role"><option value="employee" '+(u.role==="employee"?"selected":"")+'>Salarié</option><option value="manager" '+(u.role==="manager"?"selected":"")+'>Manager</option><option value="admin" '+(u.role==="admin"?"selected":"")+'>Administrateur</option></select></label>'+
@@ -190,7 +203,7 @@ function openUserModal(user){
   $("#userAccessForm")?.addEventListener("submit",async e=>{
     e.preventDefault();
     const fd=new FormData(e.target);
-    const fields={full_name:String(fd.get("full_name")||"").trim(),phone:String(fd.get("phone")||"").trim(),login_email:String(fd.get("login_email")||"").trim(),role:String(fd.get("role")||"employee"),is_active:fd.get("is_active")==="on"};
+    const fields={full_name:formatPersonName(String(fd.get("first_name")||"").trim(),String(fd.get("last_name")||"").trim()),phone:String(fd.get("phone")||"").trim(),login_email:String(fd.get("login_email")||"").trim(),role:String(fd.get("role")||"employee"),is_active:fd.get("is_active")==="on"};
     const msg=$("#userAccessMessage");
     try{
       if(!editing){
@@ -211,11 +224,11 @@ function openUserModal(user){
 function renderSettings(){
   const p=state.profile||{};
   const email=state.profile?.email||"";
-  const initials=(p.full_name||"Aloïs Monier").split(/\\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
+  const person=splitPersonName(p.full_name||"Aloïs MONIER"); const initials=initialsForName(p.full_name||"Aloïs MONIER");
   content.innerHTML='<div class="section-title"><div><h2>Paramètres</h2><div class="muted">Gérez votre profil et les réglages de PIZZA COSY.</div></div></div></div>'+
   '<div class="settings-grid">'+
   '<section class="card settings-card"><div class="settings-card-head"><div><div class="stat-label">Profil</div><h3>Mes informations</h3></div><div class="settings-avatar">'+esc(initials)+'</div></div>'+
-  '<form id="profileSettingsForm" class="settings-form"><label>Nom affiché<input name="full_name" required value="'+esc(p.full_name||"")+'"></label>'+
+  '<form id="profileSettingsForm" class="settings-form"><label>Prénom<input name="first_name" required value="'+esc(person.firstName)+'"></label><label>Nom<input name="last_name" required value="'+esc(person.lastName)+'"></label>'+
   '<label>Email<input value="'+esc(email||"Non disponible")+'" disabled></label>'+
   '<label>Rôle<input value="'+esc(roleText(state.role))+'" disabled></label>'+
   '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
@@ -486,7 +499,7 @@ document.addEventListener("click",async e=>{
   }
 });
 document.addEventListener("submit",async e=>{
- if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=String(fd.get("full_name")||"").trim(); if(!name)return; const {error}=await supabase.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",state.profile.id); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
+ if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=formatPersonName(String(fd.get("first_name")||"").trim(),String(fd.get("last_name")||"").trim()); if(!name)return; const {error}=await supabase.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",state.profile.id); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
  e.preventDefault();
  const f=e.target,fd=new FormData(f),type=f.dataset.type,est=state.profile.establishment_id,user=(await supabase.auth.getUser()).data.user;
  try{
@@ -546,7 +559,7 @@ function openFirstLoginModal(){
     const msg=$("#firstLoginMessage");
     if(password!==confirm){msg.textContent="Les mots de passe ne correspondent pas.";return;}
     if(password.length<8){msg.textContent="Le mot de passe doit contenir au moins 8 caractères.";return;}
-    const fields={full_name:String(fd.get("full_name")||"").trim(),phone:String(fd.get("phone")||"").trim()};
+    const fields={full_name:formatPersonName(String(fd.get("first_name")||"").trim(),String(fd.get("last_name")||"").trim()),phone:String(fd.get("phone")||"").trim()};
     try{
       const {error:passError}=await supabase.auth.updateUser({password});
       if(passError)throw passError;
