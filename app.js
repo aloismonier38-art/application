@@ -20,21 +20,21 @@ if(!window.TEAMHUB_SUPABASE_URL || !window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY){
 }
 supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 
-const APP_VERSION="1.1.98";
+const APP_VERSION="1.1.83";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
-const data={tasks:[],documents:[],requests:[],users:[],taskPeople:[]};
+const data={tasks:[],documents:[],requests:[],reports:[],users:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
-const titles={dashboard:"Tableau de bord",tasks:"Tâches",requests:"Demandes",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
+const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 function dateLabel(v){return v?new Date(v+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):"—";}
 function late(v){return v?Math.max(0,Math.floor((Date.now()-new Date(v+"T23:59:59").getTime())/86400000)):0;}
 function today(v){if(!v)return false;return new Date(v).toDateString()===new Date().toDateString();}
-function can(a){return state.role==="admin"||(state.role==="manager"&&["task","document","request"].includes(a))||(state.role==="employee"&&a==="request");}
+function can(a){return state.role==="admin"||(state.role==="manager"&&["task","document","request","report"].includes(a))||(state.role==="employee"&&a==="request");}
 function priorityLabel(v){return ({normal:"Normale",high:"Haute",urgent:"Urgente"})[v]||v;}
 function priorityValue(v){return ({Normale:"normal",Haute:"high",Urgente:"urgent"})[v]||"normal";}
 function roleText(v){return ({admin:"Administrateur",manager:"Manager",employee:"Salarié"})[v]||"Salarié";}
@@ -69,34 +69,15 @@ async function handleLogin(e){
   e.preventDefault();
   if(!authSubmit)return;
   authSubmit.disabled=true;
-  authInfo("Connexion à PIZZA COSY…");
   try{
     const email=$("#authEmail")?.value.trim()||"";
     const password=$("#authPassword")?.value||"";
-    if(!email||!password)throw new Error("Saisissez votre e-mail et votre mot de passe.");
-
-    const {data:loginData,error}=await supabase.auth.signInWithPassword({email,password});
+    const {error}=await supabase.auth.signInWithPassword({email,password});
     if(error)throw error;
-    if(!loginData?.session)throw new Error("Supabase n’a pas retourné de session.");
-
-    authInfo("Session validée. Chargement du profil…");
-    await loadProfile();
-
-    authInfo("Profil validé. Chargement de votre espace…");
-    await loadData();
-
     showAuth(false);
-    if(authLogout)authLogout.hidden=false;
-    render();
-
-    if(state.profile?.must_set_password)openFirstLoginModal();
-  }catch(err){
-    console.error("PIZZA COSY login error:",err);
-    showAuth(true);
-    authError("Connexion impossible : "+(err?.message||String(err)||"Erreur inconnue"));
-  }finally{
-    authSubmit.disabled=false;
-  }
+    await boot();
+  }catch(err){authError(err?.message||"Impossible de se connecter.");}
+  finally{authSubmit.disabled=false;}
 }
 
 async function handleSignup(e){
@@ -121,43 +102,6 @@ async function handleSignup(e){
 }
 
 authForm?.addEventListener("submit",handleLogin);
-$("#forgotPassword")?.addEventListener("click",async()=>{
-  const email=$("#authEmail")?.value.trim()||"";
-  if(!email){authInfo("Saisissez d’abord votre adresse e-mail.");$("#authEmail")?.focus();return;}
-  const button=$("#forgotPassword");
-  button.disabled=true;
-  try{
-    const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
-    if(error)throw error;
-    authInfo("Si cette adresse correspond à un compte, un e-mail de réinitialisation vient d’être envoyé.");
-  }catch(err){authError(err?.message||"Impossible d’envoyer l’e-mail de réinitialisation.");}
-  finally{button.disabled=false;}
-});
-
-function openPasswordRecoveryModal(){
-  if(document.getElementById("passwordRecoveryModal"))return;
-  document.body.insertAdjacentHTML("beforeend",'<div id="passwordRecoveryModal" class="modal-backdrop first-login-backdrop"><div class="first-login-card"><div class="first-login-icon">✓</div><span class="user-modal-kicker">SÉCURITÉ</span><h2>Nouveau mot de passe</h2><p class="first-login-intro">Choisissez un nouveau mot de passe pour votre espace PIZZA COSY.</p><form id="passwordRecoveryForm" class="first-login-form"><label>Nouveau mot de passe<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="8 caractères minimum"></label><label>Confirmer<input name="password_confirm" type="password" required minlength="8" autocomplete="new-password"></label><button class="btn" type="submit">Enregistrer le nouveau mot de passe</button><p id="passwordRecoveryMessage" class="user-modal-message"></p></form></div></div>');
-  $("#passwordRecoveryForm")?.addEventListener("submit",async e=>{
-    e.preventDefault();
-    const fd=new FormData(e.target);
-    const password=String(fd.get("password")||"");
-    const confirm=String(fd.get("password_confirm")||"");
-    const msg=$("#passwordRecoveryMessage");
-    if(password.length<8){msg.textContent="Le mot de passe doit contenir au moins 8 caractères.";return;}
-    if(password!==confirm){msg.textContent="Les mots de passe ne correspondent pas.";return;}
-    const {error}=await supabase.auth.updateUser({password});
-    if(error){msg.textContent=error.message;return;}
-    document.getElementById("passwordRecoveryModal")?.remove();
-    authInfo("Mot de passe modifié. Vous pouvez maintenant utiliser votre espace PIZZA COSY.");
-    showAuth(false);
-    await boot();
-  });
-}
-
-supabase.auth.onAuthStateChange((event)=>{
-  if(event==="PASSWORD_RECOVERY")setTimeout(openPasswordRecoveryModal,0);
-});
-
 $("#signupForm")?.addEventListener("submit",handleSignup);
 
 
@@ -165,17 +109,8 @@ async function loadProfile(){
   const {data:{user},error:userError}=await supabase.auth.getUser();
   if(userError)throw userError;
   if(!user)throw new Error("Session utilisateur introuvable.");
-
-  // Lecture du profil via RPC sécurisée.
-  const {data:profile,error:profileError}=await supabase.rpc("get_my_profile");
-  if(profileError)throw profileError;
-  if(!profile)throw new Error("Profil PIZZA COSY introuvable pour ce compte.");
-
-  if(profile.is_active===false){
-    await supabase.auth.signOut();
-    throw new Error("Votre accès PIZZA COSY a été désactivé. Contactez un administrateur.");
-  }
-
+  const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",user.id).single();
+  if(error)throw error;
   state.profile={...profile,email:user.email||""};
   state.role=profile.role;
 }
@@ -186,23 +121,11 @@ async function loadUsers(){
   data.users=users||[];
 }
 async function loadData(){
-  const [documents,tasks,requests,people]=await Promise.all([
-    supabase.from("documents").select("*").order("updated_at",{ascending:false}),
-    supabase.from("tasks").select("*").order("due_date",{ascending:true}).order("created_at",{ascending:false}),
-    supabase.from("requests").select("*").order("created_at",{ascending:false}),
-    supabase.from("profiles").select("id,full_name,is_active").eq("is_active",true).order("full_name",{ascending:true})
-  ]);
-  if(documents.error)throw documents.error;
-  if(tasks.error)throw tasks.error;
-  if(requests.error)throw requests.error;
-  if(people.error)throw people.error;
-  data.documents=documents.data||[];
-  data.tasks=tasks.data||[];
-  data.requests=requests.data||[];
-  data.taskPeople=people.data||[];
+  const {data:documents,error}=await supabase.from("documents").select("*").order("updated_at",{ascending:false});
+  if(error)throw error;
+  data.documents=documents||[];
   await loadUsers();
 }
-
 function taskCard(t){
   const l=late(t.due);
   return '<div class="row task-row '+(t.done?"task-done":"")+'"><input class="check" type="checkbox" data-action="toggle-task" data-id="'+esc(t.id)+'" '+(t.done?"checked":"")+'>'+
@@ -212,20 +135,12 @@ function taskCard(t){
 }
 
 function renderDashboard(){
-  const role=roleText(state.role);
-  const userCount=state.role==="admin"?data.users.length:"—";
-  const openTasks=data.tasks.filter(t=>t.status!=="done").length;
-  const openRequests=data.requests.filter(r=>!["resolved","closed"].includes(r.status)).length;
-  content.innerHTML='<div class="grid">'+
-    '<div class="card"><div class="stat-label">Tâches à faire</div><div class="stat-value">'+openTasks+'</div><div class="stat-note">Travail en cours</div></div>'+
-    '<div class="card"><div class="stat-label">Demandes ouvertes</div><div class="stat-value">'+openRequests+'</div><div class="stat-note">Besoins à traiter</div></div>'+
-    '<div class="card"><div class="stat-label">Fiches techniques</div><div class="stat-value">'+data.documents.length+'</div><div class="stat-note">Documents disponibles</div></div>'+
-    (state.role==="admin"?'<div class="card"><div class="stat-label">Membres</div><div class="stat-value">'+userCount+'</div><div class="stat-note">Comptes gérés</div></div>':"")+
-    '</div>'+
-    '<div class="section-title"><div><h2>Bienvenue sur PIZZA COSY</h2><div class="muted">Espace d’équipe</div></div></div>'+
-    '<div class="card dashboard-welcome"><strong>Votre espace est prêt.</strong><p class="muted">Retrouvez ici les fiches techniques et, selon vos droits, la gestion des accès et les paramètres.</p><div class="dashboard-role"><span class="tag">'+esc(role)+'</span></div></div>';
+ content.innerHTML='<div class="grid">'+
+ '<div class="card"><div class="stat-label">Fiches techniques</div><div class="stat-value">'+data.documents.length+'</div><div class="stat-note">Documents disponibles</div></div>'+
+ '<div class="card"><div class="stat-label">Membres</div><div class="stat-value">'+data.users.length+'</div><div class="stat-note">Comptes gérés</div></div></div>'+
+ '<div class="section-title"><h2>Bienvenue sur PIZZA COSY</h2></div>'+
+ '<div class="empty">Votre espace équipe est prêt. Retrouvez ici vos fiches techniques et, selon vos droits, la gestion des accès.</div>';
 }
-
 function renderDocuments(){
  const reorderable=can("document");
  content.innerHTML='<div class="section-title"><div><h2>Fiches techniques</h2>'+(reorderable?'<div class="muted">Glissez-déposez les fiches pour modifier leur ordre.</div>':"")+"</div>"+(reorderable?'<button class="btn" data-modal="document">+ Ajouter</button>':"")+"</div>"+
@@ -233,29 +148,15 @@ function renderDocuments(){
 }
 
 function renderTasks(){
-  const todayKey=new Date().toISOString().slice(0,10);
-  const open=data.tasks.filter(t=>t.status!=="done");
-  const todayTasks=open.filter(t=>t.due_date===todayKey);
-  const completed=data.tasks.filter(t=>t.status==="done");
-  const list=state.taskFilter==="today"?todayTasks:state.taskFilter==="done"?completed:open;
-  const personName=id=>data.taskPeople.find(p=>p.id===id)?.full_name||"Équipe";
-  const priority=(v)=>({normal:"Normale",high:"Haute",urgent:"Urgente"})[v]||"Normale";
-  const row=t=>{
-    const overdue=t.status!=="done" && t.due_date && t.due_date<todayKey;
-    return '<div class="row task-row '+(t.status==="done"?"task-done":"")+'">'+
-      '<input class="check" type="checkbox" data-action="toggle-task" data-id="'+esc(t.id)+'" '+(t.status==="done"?"checked":"")+'>'+
-      '<div class="task-main"><strong>'+esc(t.title)+'</strong>'+
-      '<div class="muted">'+esc(personName(t.assigned_to))+' · '+dateLabel(t.due_date)+(t.recurrence?" · "+esc(t.recurrence):"")+'</div>'+
-      '<div class="task-meta"><span class="tag '+(t.priority==="urgent"?"danger":"")+'">'+esc(priority(t.priority))+'</span>'+
-      (overdue?'<span class="tag danger">En retard</span>':"")+
-      (t.status==="done"?'<span class="tag">Terminée</span>':"")+
-      '</div></div></div>';
-  };
-  const filter=(label,value)=>'<button class="filter-btn '+(state.taskFilter===value?"active":"")+'" data-filter="'+value+'">'+label+'</button>';
-  content.innerHTML='<div class="section-title"><div><h2>Tâches</h2><div class="muted">Organisez le travail quotidien de l’équipe.</div></div>'+(can("task")?'<button class="btn" data-modal="task">+ Nouvelle tâche</button>':"")+'</div>'+
-    '<div class="task-filters">'+filter("À faire","open")+filter("Aujourd’hui","today")+filter("Terminées","done")+'</div>'+
-    '<div class="task-summary"><span>'+open.length+' à faire</span><span>'+todayTasks.length+' aujourd’hui</span><span>'+completed.length+' terminée'+(completed.length>1?"s":"")+'</span></div>'+
-    '<div class="list">'+(list.length?list.map(row).join(""):'<div class="empty">Aucune tâche dans cette vue.</div>')+'</div>';
+ const open=data.tasks.filter(t=>!t.done),done=data.tasks.filter(t=>t.done&&today(t.completedAt)),all=data.tasks;
+ const list=state.taskFilter==="done"?done:state.taskFilter==="all"?all:open;
+ const filter=(label,value)=>'<button class="filter-btn '+(state.taskFilter===value?"active":"")+'" data-filter="'+value+'">'+label+'</button>';
+ content.innerHTML='<div class="section-title"><div><h2>Tâches</h2><div class="muted">À faire, échéances et récurrences</div></div>'+(can("task")?'<button class="btn" data-modal="task">+ Nouvelle</button>':"")+'</div>'+
+ '<div class="task-filters">'+filter("À faire","open")+filter("Validées aujourd’hui","done")+filter("Toutes","all")+'</div>'+
+ '<div class="task-summary"><span>'+open.length+' à faire</span><span>'+done.length+' validée'+(done.length>1?"s":"")+' aujourd’hui</span></div>'+
+ '<div class="list">'+(list.length?list.map(taskCard).join(""):'<div class="empty">Aucune tâche dans cette vue.</div>')+'</div>'+
+ '<div class="section-title"><h2>Planning</h2><span class="muted">Aperçu de la semaine</span></div>'+
+ '<div class="mini-calendar">'+["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(d=>'<div class="day"><b>'+d+'</b></div>').join("")+'</div>';
 }
 
 function renderRequests(){
@@ -301,7 +202,7 @@ function openUserModal(user){
         alert("Invitation envoyée à "+fields.login_email+".");
         return;
       }
-      const {error}=await supabase.rpc("admin_update_profile",{p_user_id:u.id,p_full_name:fields.full_name,p_phone:fields.phone,p_role:fields.role,p_is_active:fields.is_active});
+      const {error}=await supabase.from("profiles").update(fields).eq("id",u.id);
       if(error)throw error;
       await loadData();render();closeModal();
     }catch(err){if(msg)msg.textContent=err.message||"Impossible d’enregistrer.";}
@@ -315,7 +216,6 @@ function renderSettings(){
   '<div class="settings-grid">'+
   '<section class="card settings-card"><div class="settings-card-head"><div><div class="stat-label">Profil</div><h3>Mes informations</h3></div><div class="settings-avatar">'+esc(initials)+'</div></div>'+
   '<form id="profileSettingsForm" class="settings-form"><label>Nom affiché<input name="full_name" required value="'+esc(p.full_name||"")+'"></label>'+
-  '<label>Téléphone<input name="phone" type="tel" value="'+esc(p.phone||"")+'" placeholder="06 00 00 00 00"></label>'+
   '<label>Email<input value="'+esc(email||"Non disponible")+'" disabled></label>'+
   '<label>Rôle<input value="'+esc(roleText(state.role))+'" disabled></label>'+
   '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
@@ -323,14 +223,18 @@ function renderSettings(){
   '<section class="card settings-card settings-danger"><div class="stat-label">Session</div><h3>Compte</h3><p class="muted">Déconnectez-vous de cet appareil. Vous pourrez vous reconnecter avec votre adresse e-mail et votre mot de passe.</p>'+
   '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div>';
 }
-function render{
+function renderReports(){
+ content.innerHTML='<div class="section-title"><h2>Rapports hebdomadaires</h2>'+(can("report")?'<button class="btn" data-modal="report">+ Nouveau rapport</button>':"")+'</div>'+
+ '<div class="list">'+(data.reports.length?data.reports.map(r=>'<div class="row"><div><strong>'+esc(r.week_label)+'</strong><div class="muted">CA '+(r.revenue??"—")+' € · '+(r.clients??"—")+' clients · Note '+(r.rating??"—")+'</div></div></div>').join(""):'<div class="empty">Aucun rapport enregistré.</div>')+'</div>';
+}
+
+function render(){
  pageTitle.textContent=titles[state.view];
- ({dashboard:renderDashboard,tasks:renderTasks,requests:renderRequests,documents:renderDocuments,access:renderAccess,settings:renderSettings}[state.view]||renderDashboard)();
+ ({dashboard:renderDashboard,documents:renderDocuments,access:renderAccess,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
  if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
 }
-
 function closeModal(){const m=$("#appModal");if(m)m.remove();}
 async function openPreview(id){
   const d=data.documents.find(x=>x.id===id);if(!d)return;
@@ -512,18 +416,19 @@ async function deleteDocument(id){
 }
 async function openModal(type){
  closeModal();
- const names={task:"Nouvelle tâche",document:"Ajouter une fiche technique","document-edit":"Modifier la fiche technique",request:"Nouveau besoin / intervention"};
+ const names={task:"Nouvelle tâche",document:"Ajouter une fiche technique","document-edit":"Modifier la fiche technique",request:"Nouveau besoin / intervention",report:"Nouveau rapport hebdomadaire"};
  let form="";
  if(type==="task")form='<label>Titre<input name="title" required placeholder="Ex. Contrôler les températures"></label><div class="form-grid"><label>Attribuer à<select name="assignee" id="assigneeSelect"></select></label><label>Date<input name="due" type="date" required></label></div><div class="form-grid"><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label><label>Récurrence<select name="repeat"><option>Aucune</option><option>Tous les jours</option><option>Chaque semaine</option><option>Chaque mois</option></select></label></div><label>Note<textarea name="note"></textarea></label>';
  if(type==="document")form='<label>Fichier<input name="file" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required></label><label>Nom<input name="name" required placeholder="Ex. Procédure ouverture"></label><label>Catégorie<select name="category"><option value="technical">Fiche technique</option><option value="procedure">Procédure</option><option value="haccp">Hygiène / HACCP</option><option value="other">Autre</option></select></label>';
  if(type==="document-edit"){const d=data.documents.find(x=>x.id===window.__editDocumentId)||{};form='<label>Nom<input name="name" required value="'+esc(d.title||"")+'"></label><label>Catégorie<select name="category"><option value="technical" '+(d.category==="technical"?"selected":"")+'>Fiche technique</option><option value="procedure" '+(d.category==="procedure"?"selected":"")+'>Procédure</option><option value="haccp" '+(d.category==="haccp"?"selected":"")+'>Hygiène / HACCP</option><option value="other" '+(d.category==="other"?"selected":"")+'>Autre</option></select></label>';
  }
  if(type==="request")form='<label>Objet<input name="title" required></label><div class="form-grid"><label>Type<select name="kind"><option>Maintenance</option><option>Matériel</option><option>Informatique</option><option>Fournisseur</option></select></label><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label></div><label>Description<textarea name="description" required></textarea>';
+ if(type==="report")form='<label>Semaine<input name="week" required placeholder="S39"></label><div class="form-grid"><label>CA TTC<input name="revenue" type="number" step=".01"></label><label>Clients<input name="clients" type="number"></label></div><div class="form-grid"><label>Ticket moyen<input name="ticket" type="number" step=".01"></label><label>Note<input name="rating" type="number" step=".01"></label></div><label>Commentaires<textarea name="comments"></textarea>';
  const m=document.createElement("div");m.id="appModal";m.className="modal-backdrop";
  m.innerHTML='<div class="modal"><div class="modal-head"><div><div class="eyebrow">Équipe</div><h2>'+names[type]+'</h2></div><button class="modal-close" data-close>×</button></div><form id="modalForm" data-type="'+type+'">'+form+'<div id="uploadProgress" class="upload-progress" hidden><div class="upload-progress-head"><span id="uploadProgressText">Préparation du téléversement…</span><strong>0 %</strong></div><div class="upload-progress-track"><div id="uploadProgressBar" class="upload-progress-bar"></div></div></div><div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn">'+(type==="document-edit"?"Enregistrer":"Créer")+'</button></div></form></div>';
  document.body.appendChild(m);
  if(type==="task"){
-   const {data:people}=await supabase.from("profiles").select("id,full_name").eq("is_active",true).order("full_name");
+   const {data:people}=await supabase.from("profiles").select("id,full_name").eq("active",true).order("full_name");
    $("#assigneeSelect").innerHTML=(people||[]).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.full_name)+'</option>').join("");
  }
  m.querySelector("input,select,textarea")?.focus();
@@ -563,7 +468,7 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",async e=>{
  if(e.target.matches('[data-action="toggle-task"]')){
    const id=e.target.dataset.id,done=e.target.checked;
-   const {error}=await supabase.rpc("complete_task",{p_task_id:id,p_done:done});
+   const {error}=await supabase.from("tasks").update({status:done?"done":"todo",completed_at:done?new Date().toISOString():null}).eq("id",id);
    if(error){e.target.checked=!done;alert(error.message);return;}
    await loadData();render();
  }
@@ -575,13 +480,13 @@ document.addEventListener("click",async e=>{
     logout.disabled=true;
     const {error}=await supabase.auth.signOut();
     if(error){logout.disabled=false;alert("Impossible de se déconnecter : "+error.message);return;}
-    state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];data.taskPeople=[];
+    state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];data.reports=[];
     showAuth(true);
     return;
   }
 });
 document.addEventListener("submit",async e=>{
- if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=String(fd.get("full_name")||"").trim(); const phone=String(fd.get("phone")||"").trim(); if(!name)return; const {error}=await supabase.rpc("update_my_profile",{p_full_name:name,p_phone:phone}); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; state.profile.phone=phone; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
+ if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=String(fd.get("full_name")||"").trim(); if(!name)return; const {error}=await supabase.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",state.profile.id); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
  e.preventDefault();
  const f=e.target,fd=new FormData(f),type=f.dataset.type,est=state.profile.establishment_id,user=(await supabase.auth.getUser()).data.user;
  try{
@@ -616,6 +521,10 @@ document.addEventListener("submit",async e=>{
      const {error}=await supabase.from("requests").insert({establishment_id:est,title:fd.get("title"),description:fd.get("description"),request_type:fd.get("kind"),priority:priorityValue(fd.get("priority")),created_by:user.id});
      if(error)throw error;state.view="requests";
    }
+   if(type==="report"){
+     const {error}=await supabase.from("reports").insert({establishment_id:est,week_label:fd.get("week"),revenue:fd.get("revenue")||null,clients:fd.get("clients")||null,average_ticket:fd.get("ticket")||null,rating:fd.get("rating")||null,comments:fd.get("comments")||null,created_by:user.id});
+     if(error)throw error;state.view="reports";
+   }
    closeModal();await loadData();render();
  }catch(err){alert(err.message||"Impossible d’enregistrer.");}
 });
@@ -641,7 +550,7 @@ function openFirstLoginModal(){
     try{
       const {error:passError}=await supabase.auth.updateUser({password});
       if(passError)throw passError;
-      const {error:profileError}=await supabase.rpc("complete_first_login",{p_full_name:fields.full_name,p_phone:fields.phone});
+      const {error:profileError}=await supabase.from("profiles").update({...fields,must_set_password:false}).eq("id",state.profile.id);
       if(profileError)throw profileError;
       state.profile={...state.profile,...fields,must_set_password:false};
       document.getElementById("firstLoginModal")?.remove();
@@ -674,8 +583,10 @@ async function boot(){
       console.error("PIZZA COSY profile loading error:",profileError);
       state.profile=null;
       state.role="employee";
-      showAuth(true);
-      authError(profileError?.message||"Impossible de charger votre profil.");
+      const section=document.getElementById("content");
+      if(section){
+        section.innerHTML='<div class="empty"><strong>Impossible de charger votre profil.</strong><br><span class="muted">'+esc(profileError?.message||"Erreur Supabase lors du chargement du profil.")+'</span></div>';
+      }
       return;
     }
 
