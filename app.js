@@ -532,12 +532,8 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",async e=>{
  if(e.target.matches('[data-action="toggle-task"]')){
    const id=e.target.dataset.id,done=e.target.checked;
-   const {error}=await supabase.from("tasks").update({status:done?"done":"todo",completed_at:done?new Date().toISOString():null}).eq("id",id);
+   const {error}=await supabase.rpc("complete_task",{p_task_id:id,p_done:done});
    if(error){e.target.checked=!done;alert(error.message);return;}
-   if(done){
-     const user=(await supabase.auth.getUser()).data.user;
-     await supabase.from("task_completions").insert({task_id:id,completed_by:user?.id||null});
-   }
    await loadData();render();
  }
 });
