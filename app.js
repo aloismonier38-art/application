@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// CosyHub 1.1.48 — interface recentrée sur les fonctions essentielles.
+// CosyHub 1.1.49 — interface recentrée sur les fonctions essentielles.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -209,6 +209,45 @@ async function openPreview(id){
     alert("Impossible d’ouvrir le document : "+(err?.message||"Erreur inconnue"));
   }
 }
+function setUploadProgress(percent,text){
+  const bar=$("#uploadProgressBar"),label=$("#uploadProgressText"),wrap=$("#uploadProgress");
+  if(!wrap)return;
+  wrap.hidden=false;
+  if(bar)bar.style.width=Math.max(0,Math.min(100,percent))+"%";
+  if(label)label.textContent=text||("Upload "+Math.round(percent)+" %");
+}
+async function uploadDocumentWithProgress(path,file){
+  const {data:{session},error}=await supabase.auth.getSession();
+  if(error)throw error;
+  if(!session?.access_token)throw new Error("Session Supabase introuvable.");
+  return await new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    const url=window.TEAMHUB_SUPABASE_URL+"/storage/v1/object/team-documents/"+path.split("/").map(encodeURIComponent).join("/");
+    xhr.open("POST",url,true);
+    xhr.setRequestHeader("Authorization","Bearer "+session.access_token);
+    xhr.setRequestHeader("apikey",window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY);
+    xhr.setRequestHeader("Content-Type",file.type||"application/octet-stream");
+    xhr.setRequestHeader("x-upsert","false");
+    xhr.upload.onprogress=e=>{
+      if(e.lengthComputable)setUploadProgress((e.loaded/e.total)*100,"Téléversement… "+Math.round((e.loaded/e.total)*100)+" %");
+    };
+    xhr.onload=()=>{
+      if(xhr.status>=200&&xhr.status<300){
+        setUploadProgress(100,"Téléversement terminé");
+        resolve(true);
+      }else{
+        let msg="Erreur pendant l’upload ("+xhr.status+").";
+        try{const body=JSON.parse(xhr.responseText);msg=body.message||body.error||msg;}catch(_){}
+        reject(new Error(msg));
+      }
+    };
+    xhr.onerror=()=>reject(new Error("Impossible de téléverser le fichier."));
+    xhr.onabort=()=>reject(new Error("Téléversement annulé."));
+    setUploadProgress(0,"Préparation du téléversement…");
+    xhr.send(file);
+  });
+}
+
 async function deleteDocument(id){
  const d=data.documents.find(x=>x.id===id);if(!d)return;
  if(!can("document"))return;
@@ -230,7 +269,7 @@ async function openModal(type){
  if(type==="request")form='<label>Objet<input name="title" required></label><div class="form-grid"><label>Type<select name="kind"><option>Maintenance</option><option>Matériel</option><option>Informatique</option><option>Fournisseur</option></select></label><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label></div><label>Description<textarea name="description" required></textarea>';
  if(type==="report")form='<label>Semaine<input name="week" required placeholder="S39"></label><div class="form-grid"><label>CA TTC<input name="revenue" type="number" step=".01"></label><label>Clients<input name="clients" type="number"></label></div><div class="form-grid"><label>Ticket moyen<input name="ticket" type="number" step=".01"></label><label>Note<input name="rating" type="number" step=".01"></label></div><label>Commentaires<textarea name="comments"></textarea>';
  const m=document.createElement("div");m.id="appModal";m.className="modal-backdrop";
- m.innerHTML='<div class="modal"><div class="modal-head"><div><div class="eyebrow">Équipe</div><h2>'+names[type]+'</h2></div><button class="modal-close" data-close>×</button></div><form id="modalForm" data-type="'+type+'">'+form+'<div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn">'+(type==="document-edit"?"Enregistrer":"Créer")+'</button></div></form></div>';
+ m.innerHTML='<div class="modal"><div class="modal-head"><div><div class="eyebrow">Équipe</div><h2>'+names[type]+'</h2></div><button class="modal-close" data-close>×</button></div><form id="modalForm" data-type="'+type+'">'+form+'<div id="uploadProgress" class="upload-progress" hidden><div class="upload-progress-head"><span id="uploadProgressText">Préparation du téléversement…</span><strong>0 %</strong></div><div class="upload-progress-track"><div id="uploadProgressBar" class="upload-progress-bar"></div></div></div><div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn">'+(type==="document-edit"?"Enregistrer":"Créer")+'</button></div></form></div>';
  document.body.appendChild(m);
  if(type==="task"){
    const {data:people}=await supabase.from("profiles").select("id,full_name").eq("active",true).order("full_name");
@@ -290,11 +329,23 @@ document.addEventListener("submit",async e=>{
      if(error)throw error;state.view="tasks";
    }
    if(type==="document"){
-     const file=fd.get("file");const id=crypto.randomUUID();const path=est+"/"+id+"/"+file.name;
-     const up=await supabase.storage.from("team-documents").upload(path,file,{upsert:false});
-     if(up.error)throw up.error;
+     const file=fd.get("file");
+     if(!file||!file.size)throw new Error("Sélectionnez un fichier.");
+     const id=crypto.randomUUID();
+     const path=est+"/"+id+"/"+file.name;
+     const submit=f.querySelector('button[type="submit"]');
+     const cancel=f.querySelector('[data-close]');
+     if(submit)submit.disabled=true;
+     if(cancel)cancel.disabled=true;
+     setUploadProgress(0,"Préparation du téléversement…");
+     await uploadDocumentWithProgress(path,file);
+     setUploadProgress(100,"Enregistrement de la fiche…");
      const {error}=await supabase.from("documents").insert({id,establishment_id:est,title:fd.get("name"),category:fd.get("category"),storage_path:path,file_name:file.name,uploaded_by:user.id});
-     if(error)throw error;state.view="documents";
+     if(error){
+       await supabase.storage.from("team-documents").remove([path]);
+       throw error;
+     }
+     state.view="documents";
    }
    if(type==="document-edit"){
      const id=window.__editDocumentId;const {error}=await supabase.from("documents").update({title:fd.get("name"),category:fd.get("category"),updated_at:new Date().toISOString()}).eq("id",id);
