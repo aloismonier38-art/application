@@ -478,3 +478,9 @@ body.dark .doc-preview.drag-over{border-color:#e38f9c;background:#292220}
 /* PIZZA COSY 1.1.61 — aucune version en bas de page */
 .app-version{display:none!important}
 .app-version-inline{display:block!important;font-size:9px!important;font-weight:500!important;line-height:1!important;margin-top:2px!important;opacity:.65!important}
+
+
+/* PIZZA COSY 1.1.62 — version uniquement sous le nom */
+.app-version-inline{display:block!important;margin:2px 0 0!important;font-size:9px!important;line-height:1!important;font-weight:500!important;letter-spacing:.02em!important;opacity:.65!important}
+.app-version{display:none!important}
+.auth-version,.settings-version{display:none!important}
