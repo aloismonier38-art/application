@@ -290,3 +290,10 @@ body.dark .settings-form label{color:#b8c5bf}body.dark .settings-form input{back
 body.dark .doc-drag-handle{color:#9aa9a1}
 body.dark .doc-preview.drag-over{border-color:#e38f9c;background:#292220}
 @media(max-width:850px){.document-list .doc-preview{grid-template-columns:26px 46px minmax(0,1fr) auto auto}.doc-drag-handle{width:22px}.document-list .doc-preview .preview-btn{padding:8px 9px}}
+
+
+/* PIZZA COSY 1.1.53 — navigation retour */
+.section-title-left{display:flex;align-items:center;gap:12px;min-width:0}
+.section-title-left h2{margin:0}
+.back-button{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;color:var(--green);border-radius:9px;cursor:pointer;font-size:20px;line-height:1;flex:0 0 auto;transition:background .15s ease,border-color .15s ease}
+.back-button:hover{background:var(--pink-light);border-color:#E38F9C}
