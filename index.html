@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>PIZZA COSY — Espace d'équipe</title>
-  <link rel="stylesheet" href="styles.css?v=98">
+  <link rel="stylesheet" href="styles.css?v=83">
 <style>
 .auth-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:20px;background:var(--cream)}
 .auth-gate[hidden]{display:none}#app[hidden]{display:none}
@@ -16,7 +16,7 @@
 </head>
 <body><div id="authGate" class="auth-gate">
   <div class="auth-shell">
-    <div class="auth-brand-top"><div><strong>PIZZA COSY <span class="app-version-inline">1.1.98</span></strong><small>Espace d'équipe</small></div></div>
+    <div class="auth-brand-top"><div><strong>PIZZA COSY <span class="app-version-inline">1.1.83</span></strong><small>Espace d'équipe</small></div></div>
     <div class="auth-panels">
       <section class="auth-panel login-panel">
         <span class="auth-kicker">ESPACE ÉQUIPE</span>
@@ -26,7 +26,6 @@
           <label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label>
           <label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
           <button class="btn" id="authSubmit" type="submit">Se connecter</button>
-          <button class="auth-forgot" id="forgotPassword" type="button">Mot de passe oublié ?</button>
         </form>
         <p id="authMessage" class="auth-message">Connectez-vous pour accéder à votre équipe.</p>
       </section>
@@ -44,11 +43,10 @@
 </div>
   <div id="app" hidden>
     <aside class="sidebar">
-      <div class="brand"><div><strong>PIZZA COSY <span class="app-version-inline">1.1.98</span></strong><small>Espace d'équipe</small></div></div>
+      <div class="brand"><div><strong>PIZZA COSY <span class="app-version-inline">1.1.83</span></strong><small>Espace d'équipe</small></div></div>
       <nav>
 <button class="nav-item active" data-view="dashboard"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V19h11v-8.5"/><path d="M10 19v-5h4v5"/></svg></span><span>Tableau de bord</span></button>
 <div class="nav-section-label">Équipe</div>
-        <button class="nav-item" data-view="tasks"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 2.5 2.5L16 9"/><path d="M8 8h2"/></svg></span><span>Tâches</span></button><button class="nav-item" data-view="requests"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v11H9l-4 4z"/><path d="M8 9h8M8 12h5"/></svg></span><span>Demandes</span></button>
         <button class="nav-item" data-view="access"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.7-3.2 2.6-5 5.5-5s4.8 1.8 5.5 5"/><path d="M15.5 11.5a3 3 0 1 0 0-6"/><path d="M16 14c2.4.2 3.9 1.8 4.5 5"/></svg></span><span>Accès</span></button>
 <button class="nav-item" data-view="documents"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v5h4"/><path d="M9 12h6M9 15.5h6"/></svg></span><span>Fiches techniques</span></button>
 </nav>
@@ -67,14 +65,12 @@
     </main>
 <div class="bottom-nav">
 <button class="active" data-view="dashboard"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V19h11v-8.5"/><path d="M10 19v-5h4v5"/></svg></span><span>Accueil</span></button>
-<button data-view="tasks"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 2.5 2.5L16 9"/><path d="M8 8h2"/></svg></span><span>Tâches</span></button>
-<button data-view="requests"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v11H9l-4 4z"/><path d="M8 9h8M8 12h5"/></svg></span><span>Demandes</span></button>
 <button data-view="documents"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v5h4"/><path d="M9 12h6M9 15.5h6"/></svg></span><span>Fiches</span></button>
 </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="supabase-config.js?v=98"></script>
-  <script src="app.js?v=98"></script>
+  <script src="supabase-config.js?v=83"></script>
+  <script src="app.js?v=83"></script>
   
 </body>
 </html>
