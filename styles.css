@@ -554,3 +554,156 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
 .dashboard-welcome{padding:22px 24px}
 .dashboard-welcome p{margin:7px 0 0;max-width:680px;line-height:1.6}
 .dashboard-role{margin-top:16px}
+
+
+/* PIZZA COSY — connexion unifiée */
+.auth-gate{
+  padding:24px 18px 40px;
+  overflow:auto;
+}
+.auth-shell{
+  width:min(500px,100%);
+  display:grid;
+  gap:18px;
+}
+.auth-brand-top{
+  margin:0;
+  text-align:center;
+}
+.auth-brand-top strong{
+  font-size:22px;
+  letter-spacing:.01em;
+}
+.auth-brand-top small{
+  font-size:12px;
+  margin-top:4px;
+}
+.auth-single-card{
+  display:block!important;
+  width:100%;
+  box-sizing:border-box;
+  background:#fff!important;
+  border:1px solid var(--line)!important;
+  border-radius:24px!important;
+  overflow:hidden!important;
+  box-shadow:0 20px 60px rgba(23,66,53,.09)!important;
+}
+.auth-single-card .auth-panel{
+  box-sizing:border-box;
+  width:100%;
+  min-height:0;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:#fff!important;
+}
+.auth-single-card .login-panel{
+  padding:38px 38px 30px;
+}
+.auth-single-card .signup-panel{
+  padding:0 38px 30px;
+}
+.auth-single-card .auth-panel h2{
+  font-size:32px;
+  line-height:1.1;
+  margin-bottom:8px;
+}
+.auth-single-card .auth-panel-text{
+  font-size:15px;
+  line-height:1.55;
+  margin:0 0 26px;
+}
+.auth-single-card .auth-form{
+  gap:16px;
+}
+.auth-single-card .auth-form input{
+  min-height:48px;
+  padding:13px 14px;
+  border-radius:11px;
+}
+.auth-single-card .auth-form .btn{
+  min-height:48px;
+  border-radius:11px;
+  margin-top:2px;
+}
+.auth-single-card .auth-forgot{
+  display:block;
+  margin:15px auto 0;
+}
+.auth-single-card .auth-message{
+  text-align:center;
+  margin-top:14px;
+}
+.auth-invite-divider{
+  height:1px;
+  background:var(--line);
+  margin-bottom:24px;
+}
+.auth-invite-content{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  padding:16px;
+  background:#f9f8f4;
+  border:1px solid #eeeae3;
+  border-radius:14px;
+}
+.auth-invite-icon{
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#f8e3e7;
+  color:#205040;
+  font-weight:800;
+}
+.auth-invite-content>div:last-child{
+  display:grid;
+  gap:5px;
+}
+.auth-invite-content .auth-kicker{
+  margin:0;
+  font-size:9px;
+}
+.auth-invite-content strong{
+  color:var(--green);
+  font-size:13px;
+}
+.auth-invite-content span:last-child{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+
+@media(max-width:700px){
+  .auth-gate{
+    padding:18px 14px 32px;
+    place-items:start center;
+  }
+  .auth-shell{
+    width:min(100%,430px);
+    padding-top:10px;
+    gap:16px;
+  }
+  .auth-brand-top strong{font-size:20px}
+  .auth-single-card{
+    border-radius:20px!important;
+  }
+  .auth-single-card .login-panel{
+    padding:30px 24px 24px;
+  }
+  .auth-single-card .signup-panel{
+    padding:0 24px 24px;
+  }
+  .auth-single-card .auth-panel h2{
+    font-size:28px;
+  }
+}
+
+@media(max-width:1100px){
+  .auth-single-card{
+    width:min(500px,100%)!important;
+  }
+}
