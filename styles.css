@@ -488,3 +488,7 @@ body.dark .doc-preview.drag-over{border-color:#e38f9c;background:#292220}
 /* Accès utilisateurs */
 .access-row{align-items:center}.access-person{display:flex;align-items:center;gap:12px;min-width:0}.access-person>div:last-child{min-width:0}.access-person .muted{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.access-meta{display:flex;align-items:center;gap:8px;flex-shrink:0}.access-status{font-size:11px;font-weight:650}.access-status.active{color:#3f7d58}.access-status.inactive{color:#b94d61}.check-line{display:flex!important;align-items:center;grid-template-columns:none!important}.check-line input{width:auto!important}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
 @media(max-width:850px){.access-row{align-items:flex-start;flex-direction:column}.access-meta{width:100%;justify-content:flex-end;flex-wrap:wrap}.access-person{width:100%}.access-person .muted{white-space:normal}}
+
+/* Navigation — catégorie Équipe */
+.nav-section-label{margin:16px 8px 2px;color:#9fb9ae;font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.1em}
+.sidebar nav .nav-section-label + .nav-item{padding-left:12px}
