@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// PIZZA COSY 1.1.61 — version centralisée.
+// PIZZA COSY 1.1.62 — version centralisée.
 // PIZZA COSY: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -20,7 +20,7 @@ if(!window.TEAMHUB_SUPABASE_URL || !window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY){
 }
 supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 
-const APP_VERSION="1.1.61";
+const APP_VERSION="1.1.62";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
 const data={tasks:[],documents:[],requests:[],reports:[]};
 const $=s=>document.querySelector(s);
@@ -177,8 +177,7 @@ function renderSettings(){
   '<label>Email<input value="'+esc(email||"Non disponible")+'" disabled></label>'+
   '<label>Rôle<input value="'+esc(roleText(state.role))+'" disabled></label>'+
   '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
-  '<section class="card settings-card"><div class="stat-label">Application</div><h3>Application</h3>'+
-  '</section>'+
+  
   '<section class="card settings-card settings-danger"><div class="stat-label">Session</div><h3>Compte</h3><p class="muted">Déconnectez-vous de cet appareil. Vous pourrez vous reconnecter avec votre adresse e-mail et votre mot de passe.</p>'+
   '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div>';
 }
