@@ -389,3 +389,82 @@ body.dark .doc-preview.drag-over{border-color:#e38f9c;background:#292220}
     grid-template-rows:auto auto;
   }
 }
+
+
+/* PIZZA COSY 1.1.59 — fiches techniques : ligne compacte */
+.document-list .doc-preview{
+  display:grid;
+  grid-template-columns:30px 42px minmax(260px,1fr) 120px 42px;
+  align-items:center;
+  gap:14px;
+  min-height:72px;
+  padding:10px 14px;
+}
+.document-list .doc-drag-handle{width:30px;height:36px}
+.document-list .pdf-icon{
+  width:42px;
+  height:48px;
+  border-radius:7px;
+  font-size:11px;
+}
+.document-list .doc-info strong{
+  font-size:15px;
+  line-height:1.25;
+  margin:0;
+}
+.document-list .doc-info .muted{
+  font-size:11px;
+  line-height:1.25;
+  margin-top:3px;
+}
+.document-list .preview-btn{
+  width:120px;
+  height:34px;
+  padding:6px 10px;
+  font-size:12px;
+}
+.document-list .doc-menu-wrap{width:42px}
+.document-list .doc-menu-btn{width:36px;height:36px;font-size:20px}
+@media(max-width:850px){
+  .document-list .doc-preview{
+    grid-template-columns:24px 40px minmax(0,1fr) 36px;
+    grid-template-rows:auto auto;
+    column-gap:9px;
+    row-gap:4px;
+    min-height:0;
+    padding:10px 11px;
+  }
+  .document-list .doc-drag-handle{
+    grid-column:1;
+    grid-row:1 / span 2;
+    width:24px;
+    height:40px;
+  }
+  .document-list .pdf-icon{
+    grid-column:2;
+    grid-row:1 / span 2;
+    width:40px;
+    height:46px;
+  }
+  .document-list .doc-info{
+    grid-column:3;
+    grid-row:1;
+    align-self:end;
+  }
+  .document-list .doc-info strong{font-size:13px}
+  .document-list .doc-info .muted{font-size:10px}
+  .document-list .preview-btn{
+    grid-column:3;
+    grid-row:2;
+    width:max-content;
+    height:30px;
+    padding:5px 9px;
+    font-size:11px;
+  }
+  .document-list .doc-menu-wrap{
+    grid-column:4;
+    grid-row:1;
+    width:36px;
+    align-self:start;
+  }
+}
