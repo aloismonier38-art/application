@@ -507,3 +507,18 @@ body.dark .doc-preview.drag-over{border-color:#e38f9c;background:#292220}
 .user-modal-security{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:18px;padding:13px 14px;background:#faf9f6;border:1px solid var(--line);border-radius:11px}.user-modal-security div{display:grid;gap:2px}.user-modal-security strong{font-size:12px}.user-modal-security small{font-size:10px;color:var(--muted)}.btn-link{border:0;background:transparent;color:var(--green);font:inherit;font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px}.user-modal-footer{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}.user-modal-footer .btn,.user-modal-footer .btn-secondary{min-width:100px}.user-modal-message{min-height:16px;margin:9px 0 0;text-align:right;color:#b94d61;font-size:11px}
 body.dark .user-modal-card{background:#202622;border-color:#303733}.user-modal-head{border-color:#303733}.user-modal-head .modal-close{background:#303733;color:#e8eee9}.user-form-grid label{color:#b8c5bf}.user-form-grid input,.user-form-grid select{background:#181d1a;border-color:#3a433e;color:#e8eee9}.user-form-grid input[readonly],.user-modal-security{background:#242b27}.user-access-state{border-color:#3a433e}.user-modal-security{border-color:#3a433e}.user-modal-security strong{color:#e8eee9}
 @media(max-width:700px){.user-modal-backdrop{padding:10px;align-items:end}.user-modal-card{max-height:calc(100vh - 20px);border-radius:20px 20px 12px 12px}.user-modal-head{padding:20px 18px 17px}.user-modal-form{padding:18px}.user-form-grid{grid-template-columns:1fr;gap:13px}.full-field{grid-column:auto}.user-access-state{min-height:54px}.user-modal-security{align-items:flex-start;flex-direction:column;gap:8px}.user-modal-footer{margin-top:18px}.user-modal-footer .btn,.user-modal-footer .btn-secondary{flex:1}}
+
+
+/* Accès — formulaire toujours clair */
+.user-modal-card{background:#fff!important;color:#205040!important}
+.user-modal-head{border-color:#e5e2dc!important}
+.user-modal-head h3,.user-modal-kicker,.user-modal-head p{color:inherit}
+.user-form-grid label{color:#53645c!important}
+.user-form-grid input,.user-form-grid select{background:#fff!important;color:#205040!important;border-color:#e5e2dc!important}
+.user-form-grid input[readonly]{background:#f7f7f4!important;color:#748078!important}
+.user-access-state{background:#fff!important;border-color:#e5e2dc!important;color:#205040!important}
+.user-access-state small{color:#748078!important}
+.user-modal-security{background:#faf9f6!important;border-color:#e5e2dc!important;color:#205040!important}
+.user-modal-security small{color:#748078!important}
+.user-modal-head .modal-close{background:#f2f2ef!important;color:#205040!important}
+.user-modal-message{color:#b94d61!important}
