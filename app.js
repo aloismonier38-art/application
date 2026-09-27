@@ -51,6 +51,10 @@ function initialsForName(fullName){
   const n=splitPersonName(fullName);
   return ((n.firstName[0]||"")+(n.lastName[0]||"")).toUpperCase()||"?";
 }
+function displayPersonName(fullName){
+  const n=splitPersonName(fullName);
+  return n.firstName && n.lastName ? formatPersonName(n.firstName,n.lastName) : String(fullName||"");
+}
 
 function showAuth(show=true){
   authGate.hidden=!show;
@@ -179,7 +183,7 @@ function renderRequests(){
 function renderAccess(){
   if(state.role!=="admin"){content.innerHTML='<div class="empty">Cette rubrique est réservée aux administrateurs.</div>';return;}
   content.innerHTML='<div class="section-title"><div><h2>Accès</h2><div class="muted">Gérez les comptes et leurs profils d’accès.</div></div><button class="btn" data-user-add>+ Ajouter un accès</button></div>'+
-  '<div class="list access-list">'+(data.users.length?data.users.map(u=>'<div class="row access-row"><div class="access-person"><div class="settings-avatar">'+esc((u.full_name||"?").split(/\\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase())+'</div><div><strong>'+esc(u.full_name||"Sans nom")+'</strong><div class="muted">'+esc(u.phone||"Téléphone non renseigné")+' · '+esc(u.login_email||"E-mail non renseigné")+'</div></div></div><div class="access-meta"><span class="tag">'+esc(roleText(u.role))+'</span><span class="access-status '+(u.is_active!==false?"active":"inactive")+'">'+(u.is_active!==false?"Actif":"Désactivé")+'</span><button class="btn-secondary" type="button" data-user-edit="'+esc(u.id)+'">Modifier</button></div></div>').join(""):'<div class="empty">Aucun compte utilisateur.</div>')+'</div>';
+  '<div class="list access-list">'+(data.users.length?data.users.map(u=>'<div class="row access-row"><div class="access-person"><div class="settings-avatar">'+esc(initialsForName(u.full_name))+'</div><div><strong>'+esc(displayPersonName(u.full_name)||"Sans nom")+'</strong><div class="muted">'+esc(u.phone||"Téléphone non renseigné")+' · '+esc(u.login_email||"E-mail non renseigné")+'</div></div></div><div class="access-meta"><span class="tag">'+esc(roleText(u.role))+'</span><span class="access-status '+(u.is_active!==false?"active":"inactive")+'">'+(u.is_active!==false?"Actif":"Désactivé")+'</span><button class="btn-secondary" type="button" data-user-edit="'+esc(u.id)+'">Modifier</button></div></div>').join(""):'<div class="empty">Aucun compte utilisateur.</div>')+'</div>';
 }
 
 function openUserModal(user){
@@ -246,7 +250,7 @@ function render(){
  ({dashboard:renderDashboard,documents:renderDocuments,access:renderAccess,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
- if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
+ if(sidebarUserName)sidebarUserName.textContent=displayPersonName(state.profile?.full_name)||"Mon profil";
 }
 function closeModal(){const m=$("#appModal");if(m)m.remove();}
 async function openPreview(id){
