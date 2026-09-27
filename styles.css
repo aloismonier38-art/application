@@ -830,3 +830,28 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
   0%{transform:translateX(-130%)}
   100%{transform:translateX(300%)}
 }
+
+
+/* Navigation mobile — toutes les rubriques restent accessibles */
+@media(max-width:850px){
+  .sidebar{
+    height:100dvh!important;
+    max-height:100dvh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .sidebar nav{
+    flex:0 0 auto!important;
+  }
+  .sidebar-bottom{
+    margin-top:auto!important;
+    flex:0 0 auto!important;
+    padding-bottom:max(18px,env(safe-area-inset-bottom))!important;
+  }
+  .user-card[data-view="settings"]{
+    display:flex!important;
+    visibility:visible!important;
+  }
+}
