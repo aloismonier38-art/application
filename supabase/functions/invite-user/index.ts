@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
     const { data: invitation, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(login_email, {
-        redirectTo: supabaseUrl.replace(/\/$/, "") + "/auth/v1/callback",
+        redirectTo: "https://aloismonier38-art.github.io/application/",
       });
     if (inviteError) throw inviteError;
 
