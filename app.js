@@ -111,6 +111,10 @@ async function loadProfile(){
   if(!user)throw new Error("Session utilisateur introuvable.");
   const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",user.id).single();
   if(error)throw error;
+  if(profile.is_active===false){
+    await supabase.auth.signOut();
+    throw new Error("Votre accès PIZZA COSY a été désactivé. Contactez un administrateur.");
+  }
   state.profile={...profile,email:user.email||""};
   state.role=profile.role;
 }
@@ -207,7 +211,7 @@ function openUserModal(user){
         alert("Invitation envoyée à "+fields.login_email+".");
         return;
       }
-      const {error}=await supabase.from("profiles").update(fields).eq("id",u.id);
+      const {error}=await supabase.rpc("admin_update_profile",{p_user_id:u.id,p_full_name:fields.full_name,p_phone:fields.phone,p_role:fields.role,p_is_active:fields.is_active});
       if(error)throw error;
       await loadData();render();closeModal();
     }catch(err){if(msg)msg.textContent=err.message||"Impossible d’enregistrer.";}
@@ -221,6 +225,7 @@ function renderSettings(){
   '<div class="settings-grid">'+
   '<section class="card settings-card"><div class="settings-card-head"><div><div class="stat-label">Profil</div><h3>Mes informations</h3></div><div class="settings-avatar">'+esc(initials)+'</div></div>'+
   '<form id="profileSettingsForm" class="settings-form"><label>Nom affiché<input name="full_name" required value="'+esc(p.full_name||"")+'"></label>'+
+  '<label>Téléphone<input name="phone" type="tel" value="'+esc(p.phone||"")+'" placeholder="06 00 00 00 00"></label>'+
   '<label>Email<input value="'+esc(email||"Non disponible")+'" disabled></label>'+
   '<label>Rôle<input value="'+esc(roleText(state.role))+'" disabled></label>'+
   '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
@@ -486,7 +491,7 @@ document.addEventListener("click",async e=>{
   }
 });
 document.addEventListener("submit",async e=>{
- if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=String(fd.get("full_name")||"").trim(); if(!name)return; const {error}=await supabase.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",state.profile.id); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
+ if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=String(fd.get("full_name")||"").trim(); const phone=String(fd.get("phone")||"").trim(); if(!name)return; const {error}=await supabase.rpc("update_my_profile",{p_full_name:name,p_phone:phone}); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; state.profile.phone=phone; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
  e.preventDefault();
  const f=e.target,fd=new FormData(f),type=f.dataset.type,est=state.profile.establishment_id,user=(await supabase.auth.getUser()).data.user;
  try{
@@ -546,7 +551,7 @@ function openFirstLoginModal(){
     try{
       const {error:passError}=await supabase.auth.updateUser({password});
       if(passError)throw passError;
-      const {error:profileError}=await supabase.from("profiles").update({...fields,must_set_password:false}).eq("id",state.profile.id);
+      const {error:profileError}=await supabase.rpc("complete_first_login",{p_full_name:fields.full_name,p_phone:fields.phone});
       if(profileError)throw profileError;
       state.profile={...state.profile,...fields,must_set_password:false};
       document.getElementById("firstLoginModal")?.remove();
@@ -579,10 +584,8 @@ async function boot(){
       console.error("PIZZA COSY profile loading error:",profileError);
       state.profile=null;
       state.role="employee";
-      const section=document.getElementById("content");
-      if(section){
-        section.innerHTML='<div class="empty"><strong>Impossible de charger votre profil.</strong><br><span class="muted">'+esc(profileError?.message||"Erreur Supabase lors du chargement du profil.")+'</span></div>';
-      }
+      showAuth(true);
+      authError(profileError?.message||"Impossible de charger votre profil.");
       return;
     }
 
