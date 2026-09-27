@@ -22,19 +22,19 @@ supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB
 
 const APP_VERSION="1.1.84";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
-const data={tasks:[],documents:[],requests:[],reports:[],users:[]};
+const data={tasks:[],documents:[],requests:[],users:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
-const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",reports:"Rapports hebdomadaires",access:"Accès",settings:"Paramètres"};
+const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 function dateLabel(v){return v?new Date(v+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):"—";}
 function late(v){return v?Math.max(0,Math.floor((Date.now()-new Date(v+"T23:59:59").getTime())/86400000)):0;}
 function today(v){if(!v)return false;return new Date(v).toDateString()===new Date().toDateString();}
-function can(a){return state.role==="admin"||(state.role==="manager"&&["task","document","request","report"].includes(a))||(state.role==="employee"&&a==="request");}
+function can(a){return state.role==="admin"||(state.role==="manager"&&["task","document","request"].includes(a))||(state.role==="employee"&&a==="request");}
 function priorityLabel(v){return ({normal:"Normale",high:"Haute",urgent:"Urgente"})[v]||v;}
 function priorityValue(v){return ({Normale:"normal",Haute:"high",Urgente:"urgent"})[v]||"normal";}
 function roleText(v){return ({admin:"Administrateur",manager:"Manager",employee:"Salarié"})[v]||"Salarié";}
@@ -121,17 +121,9 @@ async function loadUsers(){
   data.users=users||[];
 }
 async function loadData(){
-  // L’interface actuelle n’utilise plus les tâches ni les demandes.
-  // Ne pas les charger ici : une erreur RLS sur une ancienne table ne doit pas
-  // empêcher les fiches techniques et les rapports de s’afficher.
-  const [documents,reports]=await Promise.all([
-    supabase.from("documents").select("*").order("updated_at",{ascending:false}),
-    supabase.from("reports").select("*").order("created_at",{ascending:false})
-  ]);
-  if(documents.error)throw documents.error;
-  if(reports.error)throw reports.error;
-  data.documents=documents.data||[];
-  data.reports=reports.data||[];
+  const {data:documents,error}=await supabase.from("documents").select("*").order("updated_at",{ascending:false});
+  if(error)throw error;
+  data.documents=documents||[];
   await loadUsers();
 }
 
@@ -144,11 +136,14 @@ function taskCard(t){
 }
 
 function renderDashboard(){
- content.innerHTML='<div class="grid">'+
- '<div class="card"><div class="stat-label">Fiches techniques</div><div class="stat-value">'+data.documents.length+'</div><div class="stat-note">Documents enregistrés</div></div>'+
- '<div class="card"><div class="stat-label">Rapports hebdomadaires</div><div class="stat-value">'+data.reports.length+'</div><div class="stat-note">'+(data.reports.length?"Rapports enregistrés":"À compléter")+'</div></div></div>'+
- '<div class="section-title"><h2>Bienvenue sur CosyHub</h2></div>'+
- '<div class="empty">Votre espace équipe est prêt. Utilisez les sections disponibles pour gérer les fiches techniques et les rapports.</div>';
+  const role=roleText(state.role);
+  const userCount=state.role==="admin"?data.users.length:"—";
+  content.innerHTML='<div class="grid">'+
+    '<div class="card"><div class="stat-label">Fiches techniques</div><div class="stat-value">'+data.documents.length+'</div><div class="stat-note">Documents disponibles</div></div>'+
+    '<div class="card"><div class="stat-label">Membres de l’équipe</div><div class="stat-value">'+userCount+'</div><div class="stat-note">'+(state.role==="admin"?"Comptes gérés":"Accès à votre espace")+'</div></div>'+
+    '</div>'+
+    '<div class="section-title"><div><h2>Bienvenue sur PIZZA COSY</h2><div class="muted">Espace d’équipe</div></div></div>'+
+    '<div class="card dashboard-welcome"><strong>Votre espace est prêt.</strong><p class="muted">Retrouvez ici les fiches techniques et, selon vos droits, la gestion des accès et les paramètres.</p><div class="dashboard-role"><span class="tag">'+esc(role)+'</span></div></div>';
 }
 
 function renderDocuments(){
@@ -233,14 +228,9 @@ function renderSettings(){
   '<section class="card settings-card settings-danger"><div class="stat-label">Session</div><h3>Compte</h3><p class="muted">Déconnectez-vous de cet appareil. Vous pourrez vous reconnecter avec votre adresse e-mail et votre mot de passe.</p>'+
   '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div>';
 }
-function renderReports(){
- content.innerHTML='<div class="section-title"><h2>Rapports hebdomadaires</h2>'+(can("report")?'<button class="btn" data-modal="report">+ Nouveau rapport</button>':"")+'</div>'+
- '<div class="list">'+(data.reports.length?data.reports.map(r=>'<div class="row"><div><strong>'+esc(r.week_label)+'</strong><div class="muted">CA '+(r.revenue??"—")+' € · '+(r.clients??"—")+' clients · Note '+(r.rating??"—")+'</div></div></div>').join(""):'<div class="empty">Aucun rapport enregistré.</div>')+'</div>';
-}
-
-function render(){
+function render{
  pageTitle.textContent=titles[state.view];
- ({dashboard:renderDashboard,documents:renderDocuments,reports:renderReports,access:renderAccess,settings:renderSettings}[state.view]||renderDashboard)();
+ ({dashboard:renderDashboard,documents:renderDocuments,access:renderAccess,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
  if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
@@ -427,14 +417,13 @@ async function deleteDocument(id){
 }
 async function openModal(type){
  closeModal();
- const names={task:"Nouvelle tâche",document:"Ajouter une fiche technique","document-edit":"Modifier la fiche technique",request:"Nouveau besoin / intervention",report:"Nouveau rapport hebdomadaire"};
+ const names={task:"Nouvelle tâche",document:"Ajouter une fiche technique","document-edit":"Modifier la fiche technique",request:"Nouveau besoin / intervention"};
  let form="";
  if(type==="task")form='<label>Titre<input name="title" required placeholder="Ex. Contrôler les températures"></label><div class="form-grid"><label>Attribuer à<select name="assignee" id="assigneeSelect"></select></label><label>Date<input name="due" type="date" required></label></div><div class="form-grid"><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label><label>Récurrence<select name="repeat"><option>Aucune</option><option>Tous les jours</option><option>Chaque semaine</option><option>Chaque mois</option></select></label></div><label>Note<textarea name="note"></textarea></label>';
  if(type==="document")form='<label>Fichier<input name="file" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required></label><label>Nom<input name="name" required placeholder="Ex. Procédure ouverture"></label><label>Catégorie<select name="category"><option value="technical">Fiche technique</option><option value="procedure">Procédure</option><option value="haccp">Hygiène / HACCP</option><option value="other">Autre</option></select></label>';
  if(type==="document-edit"){const d=data.documents.find(x=>x.id===window.__editDocumentId)||{};form='<label>Nom<input name="name" required value="'+esc(d.title||"")+'"></label><label>Catégorie<select name="category"><option value="technical" '+(d.category==="technical"?"selected":"")+'>Fiche technique</option><option value="procedure" '+(d.category==="procedure"?"selected":"")+'>Procédure</option><option value="haccp" '+(d.category==="haccp"?"selected":"")+'>Hygiène / HACCP</option><option value="other" '+(d.category==="other"?"selected":"")+'>Autre</option></select></label>';
  }
  if(type==="request")form='<label>Objet<input name="title" required></label><div class="form-grid"><label>Type<select name="kind"><option>Maintenance</option><option>Matériel</option><option>Informatique</option><option>Fournisseur</option></select></label><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label></div><label>Description<textarea name="description" required></textarea>';
- if(type==="report")form='<label>Semaine<input name="week" required placeholder="S39"></label><div class="form-grid"><label>CA TTC<input name="revenue" type="number" step=".01"></label><label>Clients<input name="clients" type="number"></label></div><div class="form-grid"><label>Ticket moyen<input name="ticket" type="number" step=".01"></label><label>Note<input name="rating" type="number" step=".01"></label></div><label>Commentaires<textarea name="comments"></textarea>';
  const m=document.createElement("div");m.id="appModal";m.className="modal-backdrop";
  m.innerHTML='<div class="modal"><div class="modal-head"><div><div class="eyebrow">Équipe</div><h2>'+names[type]+'</h2></div><button class="modal-close" data-close>×</button></div><form id="modalForm" data-type="'+type+'">'+form+'<div id="uploadProgress" class="upload-progress" hidden><div class="upload-progress-head"><span id="uploadProgressText">Préparation du téléversement…</span><strong>0 %</strong></div><div class="upload-progress-track"><div id="uploadProgressBar" class="upload-progress-bar"></div></div></div><div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn">'+(type==="document-edit"?"Enregistrer":"Créer")+'</button></div></form></div>';
  document.body.appendChild(m);
@@ -491,7 +480,7 @@ document.addEventListener("click",async e=>{
     logout.disabled=true;
     const {error}=await supabase.auth.signOut();
     if(error){logout.disabled=false;alert("Impossible de se déconnecter : "+error.message);return;}
-    state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];data.reports=[];
+    state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];
     showAuth(true);
     return;
   }
@@ -531,10 +520,6 @@ document.addEventListener("submit",async e=>{
    if(type==="request"){
      const {error}=await supabase.from("requests").insert({establishment_id:est,title:fd.get("title"),description:fd.get("description"),request_type:fd.get("kind"),priority:priorityValue(fd.get("priority")),created_by:user.id});
      if(error)throw error;state.view="requests";
-   }
-   if(type==="report"){
-     const {error}=await supabase.from("reports").insert({establishment_id:est,week_label:fd.get("week"),revenue:fd.get("revenue")||null,clients:fd.get("clients")||null,average_ticket:fd.get("ticket")||null,rating:fd.get("rating")||null,comments:fd.get("comments")||null,created_by:user.id});
-     if(error)throw error;state.view="reports";
    }
    closeModal();await loadData();render();
  }catch(err){alert(err.message||"Impossible d’enregistrer.");}
