@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// CosyHub 1.1.50 — réorganisation des fiches techniques par glisser-déposer.
+// CosyHub 1.1.51 — prévisualisation PDF avec écran de chargement.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -179,9 +179,9 @@ function renderSettings(){
   '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
   '<section class="card settings-card"><div class="stat-label">Application</div><h3>Préférences</h3>'+
   '<div class="settings-row"><div><strong>Mode sombre</strong><div class="muted">Adapter l’affichage à vos préférences.</div></div><button type="button" class="btn-secondary" data-settings-theme>Changer</button></div>'+
-  '<div class="settings-row"><div><strong>Version</strong><div class="muted">CosyHub 1.1.50</div></div></div></section>'+
+  '<div class="settings-row"><div><strong>Version</strong><div class="muted">CosyHub 1.1.51</div></div></div></section>'+
   '<section class="card settings-card settings-danger"><div class="stat-label">Session</div><h3>Compte</h3><p class="muted">Déconnectez-vous de cet appareil. Vous pourrez vous reconnecter avec votre adresse e-mail et votre mot de passe.</p>'+
-  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div><div class="app-version settings-version">CosyHub 1.1.50</div>';
+  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div><div class="app-version settings-version">CosyHub 1.1.51</div>';
 }
 function renderReports(){
  content.innerHTML='<div class="section-title"><h2>Rapports hebdomadaires</h2>'+(can("report")?'<button class="btn" data-modal="report">+ Nouveau rapport</button>':"")+'</div>'+
@@ -200,14 +200,52 @@ function closeModal(){const m=$("#appModal");if(m)m.remove();}
 async function openPreview(id){
   const d=data.documents.find(x=>x.id===id);if(!d)return;
   const tab=window.open("about:blank","_blank");
+  if(!tab){alert("Autorisez les fenêtres pop-up pour prévisualiser le document.");return;}
+  const loadingHtml='<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chargement — '+esc(d.title)+'</title><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f9f8f4;color:#205040}body{display:grid;place-items:center}.loader{text-align:center;padding:30px;max-width:420px;width:90%}.spinner{width:42px;height:42px;margin:0 auto 20px;border:4px solid #e5e2dc;border-top-color:#205040;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}h1{font-size:18px;margin:0 0 8px}p{font-size:13px;color:#748078;margin:0 0 18px}.track{height:8px;background:#e5e2dc;border-radius:999px;overflow:hidden}.bar{height:100%;width:0;background:#205040;border-radius:999px;transition:width .15s ease}.percent{margin-top:8px;font-size:12px;color:#748078}.pdf{display:none;position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}</style></head><body><div class="loader" id="loader"><div class="spinner"></div><h1>Veuillez patienter…</h1><p id="status">Préparation du document</p><div class="track"><div class="bar" id="bar"></div></div><div class="percent" id="percent">0 %</div></div><iframe id="pdf" class="pdf" title="Prévisualisation du PDF"></iframe></body></html>';
+  tab.document.open();tab.document.write(loadingHtml);tab.document.close();
   try{
-    const {data:url,error}=await supabase.storage.from("team-documents").createSignedUrl(d.storage_path,300);
+    const {data:url,error}=await supabase.storage.from("team-documents").createSignedUrl(d.storage_path,600);
     if(error)throw error;
-    if(tab)tab.location.href=url.signedUrl;
-    else window.location.href=url.signedUrl;
+    const response=await fetch(url.signedUrl);
+    if(!response.ok)throw new Error("Impossible de charger le PDF ("+response.status+").");
+    const total=Number(response.headers.get("content-length"))||0;
+    const reader=response.body?.getReader();
+    const chunks=[];
+    let loaded=0;
+    const updateProgress=()=>{
+      const percent=total?Math.min(99,Math.round((loaded/total)*100)):0;
+      const bar=tab.document.getElementById("bar"),label=tab.document.getElementById("percent"),status=tab.document.getElementById("status");
+      if(bar)bar.style.width=percent+"%";
+      if(label)label.textContent=percent+" %";
+      if(status)status.textContent=total?"Téléchargement du PDF…":"Chargement du PDF…";
+    };
+    if(reader){
+      while(true){
+        const part=await reader.read();
+        if(part.done)break;
+        chunks.push(part.value);loaded+=part.value.byteLength;updateProgress();
+      }
+    }else{
+      chunks.push(new Uint8Array(await response.arrayBuffer()));loaded=total||chunks[0].byteLength;
+    }
+    const blob=new Blob(chunks,{type:"application/pdf"});
+    const blobUrl=URL.createObjectURL(blob);
+    const pdf=tab.document.getElementById("pdf"),loader=tab.document.getElementById("loader"),bar=tab.document.getElementById("bar"),percent=tab.document.getElementById("percent"),status=tab.document.getElementById("status");
+    if(bar)bar.style.width="100%";
+    if(percent)percent.textContent="100 %";
+    if(status)status.textContent="Ouverture du PDF…";
+    if(pdf){
+      pdf.onload=()=>{
+        if(loader)loader.style.display="none";
+        pdf.style.display="block";
+        setTimeout(()=>URL.revokeObjectURL(blobUrl),60000);
+      };
+      pdf.src=blobUrl;
+    }
   }catch(err){
-    if(tab)tab.close();
-    alert("Impossible d’ouvrir le document : "+(err?.message||"Erreur inconnue"));
+    try{
+      tab.document.body.innerHTML='<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:40px;text-align:center;color:#205040"><h2>Impossible d’ouvrir le document</h2><p style="color:#748078">'+esc(err?.message||"Erreur inconnue")+'</p></div>';
+    }catch(_){}
   }
 }
 function setUploadProgress(percent,text){
