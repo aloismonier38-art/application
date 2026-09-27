@@ -855,3 +855,27 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
     visibility:visible!important;
   }
 }
+
+
+@media(max-width:850px){
+  .sidebar .brand{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    min-height:72px!important;
+    flex:0 0 auto!important;
+    padding:22px 24px 18px!important;
+  }
+  .sidebar .brand strong{
+    display:block!important;
+    visibility:visible!important;
+    font-size:20px!important;
+    line-height:1.1!important;
+  }
+  .sidebar .brand small{
+    display:block!important;
+    visibility:visible!important;
+    font-size:11px!important;
+    margin-top:5px!important;
+  }
+}
