@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// PIZZA COSY 1.1.55 — correction du chargement du profil et des données.
+// PIZZA COSY 1.1.56 — correction du bouton paramètres supprimé.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
