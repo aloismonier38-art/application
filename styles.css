@@ -279,3 +279,14 @@ body.dark .settings-form label{color:#b8c5bf}body.dark .settings-form input{back
 .upload-progress-head strong{color:#205040;font-size:13px}
 .upload-progress-track{height:8px;background:#E5E2DC;border-radius:999px;overflow:hidden}
 .upload-progress-bar{height:100%;width:0;background:#205040;border-radius:999px;transition:width .15s ease}
+
+
+/* CosyHub 1.1.50 — réorganisation des fiches techniques */
+.document-list .doc-preview{grid-template-columns:28px 46px minmax(0,1fr) auto auto;cursor:grab}
+.document-list .doc-preview:active{cursor:grabbing}
+.doc-drag-handle{display:flex;align-items:center;justify-content:center;width:24px;height:38px;color:#8a928d;font-size:16px;letter-spacing:-4px;user-select:none}
+.doc-preview.is-dragging{opacity:.45;border-style:dashed}
+.doc-preview.drag-over{border-color:#E38F9C;background:#fff8f9;box-shadow:0 0 0 2px rgba(227,143,156,.16)}
+body.dark .doc-drag-handle{color:#9aa9a1}
+body.dark .doc-preview.drag-over{border-color:#e38f9c;background:#292220}
+@media(max-width:850px){.document-list .doc-preview{grid-template-columns:26px 46px minmax(0,1fr) auto auto}.doc-drag-handle{width:22px}.document-list .doc-preview .preview-btn{padding:8px 9px}}
