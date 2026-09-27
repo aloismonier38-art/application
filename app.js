@@ -165,12 +165,17 @@ async function loadProfile(){
   const {data:{user},error:userError}=await supabase.auth.getUser();
   if(userError)throw userError;
   if(!user)throw new Error("Session utilisateur introuvable.");
-  const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",user.id).single();
-  if(error)throw error;
+
+  // Lecture du profil via RPC sécurisée.
+  const {data:profile,error:profileError}=await supabase.rpc("get_my_profile");
+  if(profileError)throw profileError;
+  if(!profile)throw new Error("Profil PIZZA COSY introuvable pour ce compte.");
+
   if(profile.is_active===false){
     await supabase.auth.signOut();
     throw new Error("Votre accès PIZZA COSY a été désactivé. Contactez un administrateur.");
   }
+
   state.profile={...profile,email:user.email||""};
   state.role=profile.role;
 }
