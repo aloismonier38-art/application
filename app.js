@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// PIZZA COSY 1.1.54 — interface simplifiée.
+// PIZZA COSY 1.1.55 — correction du chargement du profil et des données.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -114,17 +114,16 @@ async function loadProfile(){
   state.role=profile.role;
 }
 async function loadData(){
-  const est=state.profile?.establishment_id;
-  const [tasks,documents,requests,reports]=await Promise.all([
-    supabase.from("tasks").select("*").order("due_date",{ascending:true}),
+  // L’interface actuelle n’utilise plus les tâches ni les demandes.
+  // Ne pas les charger ici : une erreur RLS sur une ancienne table ne doit pas
+  // empêcher les fiches techniques et les rapports de s’afficher.
+  const [documents,reports]=await Promise.all([
     supabase.from("documents").select("*").order("updated_at",{ascending:false}),
-    supabase.from("requests").select("*").order("created_at",{ascending:false}),
     supabase.from("reports").select("*").order("created_at",{ascending:false})
   ]);
-  for(const r of [tasks,documents,requests,reports])if(r.error)throw r.error;
-  data.tasks=(tasks.data||[]).map(t=>({id:t.id,title:t.title,description:t.description,assignee:t.assigned_to,due:t.due_date,priority:t.priority,repeat:t.recurrence||"Aucune",done:t.status==="done",completedAt:t.completed_at}));
+  if(documents.error)throw documents.error;
+  if(reports.error)throw reports.error;
   data.documents=documents.data||[];
-  data.requests=(requests.data||[]).map(r=>({id:r.id,title:r.title,kind:r.request_type,status:r.status,priority:r.priority,description:r.description}));
   data.reports=reports.data||[];
 }
 
@@ -496,9 +495,14 @@ async function boot(){
       ]);
       render();
     }catch(profileError){
-      console.error("CosyHub profile loading error:",profileError);
+      console.error("PIZZA COSY profile loading error:",profileError);
+      state.profile=null;
       state.role="employee";
-      render();
+      const section=document.getElementById("content");
+      if(section){
+        section.innerHTML='<div class="empty"><strong>Impossible de charger votre profil.</strong><br><span class="muted">'+esc(profileError?.message||"Erreur Supabase lors du chargement du profil.")+'</span></div>';
+      }
+      return;
     }
 
     try{
@@ -508,10 +512,10 @@ async function boot(){
       ]);
       render();
     }catch(dataError){
-      console.error("CosyHub data loading error:",dataError);
+      console.error("PIZZA COSY data loading error:",dataError);
       const section=document.getElementById("content");
       if(section){
-        section.innerHTML='<div class="empty"><strong>Tableau de bord chargé.</strong><br><span class="muted">Les données n’ont pas encore pu être récupérées. Rechargez la page dans quelques secondes.</span></div>';
+        section.innerHTML='<div class="empty"><strong>Impossible de charger les données.</strong><br><span class="muted">'+esc(dataError?.message||"Erreur Supabase lors du chargement des données.")+'</span></div>';
       }
     }
   }catch(err){
