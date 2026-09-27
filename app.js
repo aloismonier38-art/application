@@ -219,7 +219,7 @@ function openUserModal(user){
         alert("Invitation envoyée à "+fields.login_email+".");
         return;
       }
-      const {error}=await supabase.from("profiles").update(fields).eq("id",u.id);
+      const {error}=await supabase.rpc("admin_update_profile",{p_user_id:u.id,p_full_name:fields.full_name,p_phone:fields.phone,p_role:fields.role,p_is_active:fields.is_active});
       if(error)throw error;
       await loadData();render();closeModal();
     }catch(err){if(msg)msg.textContent=err.message||"Impossible d’enregistrer.";}
@@ -503,7 +503,7 @@ document.addEventListener("click",async e=>{
   }
 });
 document.addEventListener("submit",async e=>{
- if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=formatPersonName(String(fd.get("first_name")||"").trim(),String(fd.get("last_name")||"").trim()); if(!name)return; const {error}=await supabase.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",state.profile.id); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
+ if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=formatPersonName(String(fd.get("first_name")||"").trim(),String(fd.get("last_name")||"").trim()); if(!name)return; const {error}=await supabase.rpc("update_my_profile",{p_full_name:name,p_phone:state.profile.phone||""}); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
  e.preventDefault();
  const f=e.target,fd=new FormData(f),type=f.dataset.type,est=state.profile.establishment_id,user=(await supabase.auth.getUser()).data.user;
  try{
@@ -568,7 +568,7 @@ function openFirstLoginModal(){
     try{
       const {error:passError}=await supabase.auth.updateUser({password});
       if(passError)throw passError;
-      const {error:profileError}=await supabase.from("profiles").update({...fields,must_set_password:false}).eq("id",state.profile.id);
+      const {error:profileError}=await supabase.rpc("complete_first_login",{p_full_name:fields.full_name,p_phone:fields.phone});
       if(profileError)throw profileError;
       state.profile={...state.profile,...fields,must_set_password:false};
       document.getElementById("firstLoginModal")?.remove();
