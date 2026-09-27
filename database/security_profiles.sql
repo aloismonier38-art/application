@@ -145,3 +145,55 @@ grant execute on function public.complete_first_login(text,text) to authenticate
 grant execute on function public.admin_update_profile(uuid,text,text,public.user_role,boolean) to authenticated;
 
 drop policy if exists profiles_update_self on public.profiles;
+
+
+-- RLS opérationnelle pour les tâches
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select on public.profiles
+for select to authenticated
+using (
+  id = auth.uid()
+  or public.is_admin()
+  or (
+    public.is_manager()
+    and establishment_id = public.my_establishment()
+  )
+);
+
+drop policy if exists tasks_select on public.tasks;
+create policy tasks_select on public.tasks
+for select to authenticated
+using (
+  public.is_admin()
+  or (
+    public.is_manager()
+    and establishment_id = public.my_establishment()
+  )
+  or assigned_to = auth.uid()
+);
+
+drop policy if exists tasks_update on public.tasks;
+create policy tasks_update on public.tasks
+for update to authenticated
+using (
+  public.is_admin()
+  or (
+    public.is_manager()
+    and establishment_id = public.my_establishment()
+  )
+  or assigned_to = auth.uid()
+)
+with check (
+  public.is_admin()
+  or (
+    public.is_manager()
+    and establishment_id = public.my_establishment()
+  )
+  or assigned_to = auth.uid()
+);
+
+create index if not exists profiles_establishment_idx
+  on public.profiles(establishment_id);
+
+create index if not exists tasks_assigned_to_status_idx
+  on public.tasks(assigned_to, status);
