@@ -257,49 +257,13 @@ async function openPreview(id){
   const d=data.documents.find(x=>x.id===id);if(!d)return;
   const tab=window.open("about:blank","_blank");
   if(!tab){alert("Autorisez les fenêtres pop-up pour prévisualiser le document.");return;}
-  const loadingHtml='<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Chargement — '+esc(d.title)+'</title><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f9f8f4;color:#205040}body{display:grid;place-items:center}.loader{text-align:center;padding:30px;max-width:420px;width:90%}.spinner{width:42px;height:42px;margin:0 auto 20px;border:4px solid #e5e2dc;border-top-color:#205040;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}h1{font-size:18px;margin:0 0 8px}p{font-size:13px;color:#748078;margin:0 0 18px}.track{height:8px;background:#e5e2dc;border-radius:999px;overflow:hidden}.bar{height:100%;width:0;background:#205040;border-radius:999px;transition:width .15s ease}.percent{margin-top:8px;font-size:12px;color:#748078}.pdf{display:none;position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}</style></head><body><div class="loader" id="loader"><div class="spinner"></div><h1>Veuillez patienter…</h1><p id="status">Préparation du document</p><div class="track" id="track"><div class="bar" id="bar"></div></div><div class="percent" id="percent">0 %</div></div><iframe id="pdf" class="pdf" title="Prévisualisation du PDF"></iframe></body></html>';
+  const loadingHtml='<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Ouverture — '+esc(d.title)+'</title><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f9f8f4;color:#205040}body{display:grid;place-items:center}.loader{text-align:center;padding:30px;max-width:420px;width:90%}.spinner{width:42px;height:42px;margin:0 auto 20px;border:4px solid #e5e2dc;border-top-color:#205040;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}h1{font-size:18px;margin:0 0 8px}p{font-size:13px;color:#748078;margin:0}</style></head><body><div class="loader"><div class="spinner"></div><h1>Ouverture du PDF…</h1><p>Préparation du document</p></div></body></html>';
   tab.document.open();tab.document.write(loadingHtml);tab.document.close();
   try{
     const {data:url,error}=await supabase.storage.from("team-documents").createSignedUrl(d.storage_path,600);
     if(error)throw error;
-    const bar=tab.document.getElementById("bar"),label=tab.document.getElementById("percent"),status=tab.document.getElementById("status"),track=tab.document.getElementById("track");
-    await new Promise((resolve,reject)=>{
-      const xhr=new XMLHttpRequest();
-      xhr.open("GET",url.signedUrl,true);
-      xhr.responseType="blob";
-      xhr.onprogress=e=>{
-        if(e.lengthComputable && e.total){
-          const percent=Math.min(99,Math.round((e.loaded/e.total)*100));
-          if(bar)bar.style.width=percent+"%";
-          if(label)label.textContent=percent+" %";
-          if(status)status.textContent="Téléchargement du PDF…";
-          if(track)track.classList.remove("pdf-loader-indeterminate");
-        }else{
-          if(track)track.classList.add("pdf-loader-indeterminate");
-          if(status)status.textContent="Téléchargement du PDF…";
-        }
-      };
-      xhr.onload=()=>{
-        if(xhr.status>=200&&xhr.status<300){resolve(xhr.response);}
-        else reject(new Error("Impossible de charger le PDF ("+xhr.status+")."));
-      };
-      xhr.onerror=()=>reject(new Error("Impossible de télécharger le PDF."));
-      xhr.onabort=()=>reject(new Error("Téléchargement interrompu."));
-      xhr.send();
-    }).then(blob=>{
-      if(bar)bar.style.width="100%";
-      if(label)label.textContent="100 %";
-      if(status)status.textContent="Ouverture du PDF…";
-      const blobUrl=URL.createObjectURL(blob);
-      const pdf=tab.document.getElementById("pdf"),loader=tab.document.getElementById("loader");
-      if(!pdf)return;
-      pdf.onload=()=>{
-        if(loader)loader.style.display="none";
-        pdf.style.display="block";
-        setTimeout(()=>URL.revokeObjectURL(blobUrl),60000);
-      };
-      pdf.src=blobUrl;
-    });
+    if(!url?.signedUrl)throw new Error("Lien sécurisé du document introuvable.");
+    tab.location.replace(url.signedUrl);
   }catch(err){
     try{
       tab.document.body.innerHTML='<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:40px;text-align:center;color:#205040"><h2>Impossible d’ouvrir le document</h2><p style="color:#748078">'+esc(err?.message||"Erreur inconnue")+'</p></div>';
