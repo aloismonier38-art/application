@@ -183,10 +183,31 @@ function openUserModal(user){
   closeModal();
   const u=user||{id:"",full_name:"",phone:"",login_email:"",role:"employee",is_active:true};
   const editing=!!user;
-  document.body.insertAdjacentHTML("beforeend",'<div id="appModal" class="modal-backdrop"><div class="modal-card"><button class="modal-close" data-close>×</button><h3>'+(editing?"Modifier le compte":"Ajouter un accès")+'</h3><p class="muted">Informations et profil d’accès.</p><form id="userAccessForm" class="settings-form"><label>Nom et prénom<input name="full_name" required value="'+esc(u.full_name||"")+'"></label><label>Numéro de téléphone<input name="phone" type="tel" value="'+esc(u.phone||"")+'" placeholder="06 00 00 00 00"></label><label>E-mail de connexion<input name="login_email" type="email" required value="'+esc(u.login_email||"")+'" '+(editing?"readonly":"")+'></label><label>Profil d’accès<select name="role"><option value="employee" '+(u.role==="employee"?"selected":"")+'>Salarié</option><option value="manager" '+(u.role==="manager"?"selected":"")+'>Manager</option><option value="admin" '+(u.role==="admin"?"selected":"")+'>Administrateur</option></select></label><label class="check-line"><input name="is_active" type="checkbox" '+(u.is_active!==false?"checked":"")+'> Compte actif</label>'+(editing?'<button type="button" class="btn-secondary" data-reset-user="'+esc(u.id)+'">Envoyer un lien de réinitialisation du mot de passe</button>':"")+'<div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn" type="submit">Enregistrer</button></div><p id="userAccessMessage" class="muted"></p></form></div></div>');
+  const initials=(u.full_name||"Nouvel accès").split(/\\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
+  document.body.insertAdjacentHTML("beforeend",'<div id="appModal" class="modal-backdrop user-modal-backdrop"><div class="user-modal-card">'+
+    '<div class="user-modal-head"><div class="user-modal-identity"><div class="user-modal-avatar">'+esc(initials)+'</div><div><span class="user-modal-kicker">ACCÈS ÉQUIPE</span><h3>'+(editing?"Modifier le compte":"Ajouter un accès")+'</h3><p>'+(editing?"Modifiez les informations et les droits de cet utilisateur.":"Créez un nouvel accès à l’espace équipe.")+'</p></div></div><button class="modal-close" data-close aria-label="Fermer">×</button></div>'+
+    '<form id="userAccessForm" class="user-modal-form">'+
+      '<div class="user-form-grid">'+
+        '<label>Nom et prénom<input name="full_name" required value="'+esc(u.full_name||"")+'" placeholder="Ex. Jean Dupont"></label>'+
+        '<label>Numéro de téléphone<input name="phone" type="tel" value="'+esc(u.phone||"")+'" placeholder="06 00 00 00 00"></label>'+
+        '<label class="full-field">E-mail de connexion<input name="login_email" type="email" required value="'+esc(u.login_email||"")+'" '+(editing?"readonly":"")+' placeholder="prenom@exemple.fr"></label>'+
+        '<label>Profil d’accès<select name="role"><option value="employee" '+(u.role==="employee"?"selected":"")+'>Salarié</option><option value="manager" '+(u.role==="manager"?"selected":"")+'>Manager</option><option value="admin" '+(u.role==="admin"?"selected":"")+'>Administrateur</option></select></label>'+
+        '<div class="user-access-state"><span><strong>Compte actif</strong><small>Autorise la connexion à l’espace équipe.</small></span><label class="switch"><input name="is_active" type="checkbox" '+(u.is_active!==false?"checked":"")+'><span class="switch-track"></span></label></div>'+
+      '</div>'+
+      (editing?'<div class="user-modal-security"><div><strong>Sécurité du compte</strong><small>Le mot de passe peut être réinitialisé par e-mail.</small></div><button type="button" class="btn-link" data-reset-user="'+esc(u.id)+'">Réinitialiser le mot de passe</button></div>':"")+
+      '<div class="user-modal-footer"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn" type="submit">Enregistrer</button></div><p id="userAccessMessage" class="user-modal-message"></p>'+
+    '</form></div></div>');
   $("#userAccessForm")?.addEventListener("submit",async e=>{
-    e.preventDefault();const fd=new FormData(e.target);const fields={full_name:String(fd.get("full_name")||"").trim(),phone:String(fd.get("phone")||"").trim(),login_email:String(fd.get("login_email")||"").trim(),role:String(fd.get("role")||"employee"),is_active:fd.get("is_active")==="on"};const msg=$("#userAccessMessage");
-    try{if(!editing){msg.textContent="Pour créer un nouveau compte de connexion, utilisez la création de compte Supabase. Le compte pourra ensuite être géré ici.";return;}const {error}=await supabase.from("profiles").update(fields).eq("id",u.id);if(error)throw error;await loadData();render();closeModal();}catch(err){if(msg)msg.textContent=err.message||"Impossible d’enregistrer.";}
+    e.preventDefault();
+    const fd=new FormData(e.target);
+    const fields={full_name:String(fd.get("full_name")||"").trim(),phone:String(fd.get("phone")||"").trim(),login_email:String(fd.get("login_email")||"").trim(),role:String(fd.get("role")||"employee"),is_active:fd.get("is_active")==="on"};
+    const msg=$("#userAccessMessage");
+    try{
+      if(!editing){msg.textContent="La création du compte de connexion sera disponible ici.";return;}
+      const {error}=await supabase.from("profiles").update(fields).eq("id",u.id);
+      if(error)throw error;
+      await loadData();render();closeModal();
+    }catch(err){if(msg)msg.textContent=err.message||"Impossible d’enregistrer.";}
   });
 }
 function renderSettings(){
