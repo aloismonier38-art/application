@@ -73,17 +73,16 @@
         <div class="user-card" data-view="settings" role="button" tabindex="0" title="Ouvrir les paramètres"><div class="avatar">AM</div><div><strong id="sidebarUserName">Aloïs Monier</strong><small id="roleLabel">Administrateur</small></div></div>
       </div>
     </aside>
+    <div class="mobile-sidebar-overlay" data-mobile-menu-close></div>
     <main class="main">
       <header class="topbar">
+        <button class="mobile-menu-btn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" data-mobile-menu>☰</button>
         <div><h1 id="pageTitle">Tableau de bord</h1></div>
         <div class="top-actions"></div>
       </header>
       <section id="content"></section>
     </main>
-<div class="bottom-nav">
-<button class="active" data-view="dashboard"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V19h11v-8.5"/><path d="M10 19v-5h4v5"/></svg></span><span>Accueil</span></button>
-<button data-view="documents"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v5h4"/><path d="M9 12h6M9 15.5h6"/></svg></span><span>Fiches</span></button>
-</div>
+
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="supabase-config.js?v=95"></script>
