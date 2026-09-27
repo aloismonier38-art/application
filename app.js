@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// CosyHub 1.1.51 — prévisualisation PDF avec écran de chargement.
+// CosyHub 1.1.53 — suppression du mode sombre et navigation retour.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -21,10 +21,11 @@ if(!window.TEAMHUB_SUPABASE_URL || !window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY){
 supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
+const navigationHistory=[];
 const data={tasks:[],documents:[],requests:[],reports:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
-const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle"),themeToggle=$("#themeToggle"),sidebarUserName=$("#sidebarUserName");
+const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
 const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",reports:"Rapports hebdomadaires",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
@@ -146,7 +147,7 @@ function renderDashboard(){
 
 function renderDocuments(){
  const reorderable=can("document");
- content.innerHTML='<div class="section-title"><div><h2>Fiches techniques</h2>'+(reorderable?'<div class="muted">Glissez-déposez les fiches pour modifier leur ordre.</div>':"")+"</div>"+(reorderable?'<button class="btn" data-modal="document">+ Ajouter</button>':"")+"</div>"+
+ content.innerHTML='<div class="section-title"><div class="section-title-left"><button class="back-button" type="button" data-back aria-label="Retour">←</button><div><h2>Fiches techniques</h2>'+(reorderable?'<div class="muted">Glissez-déposez les fiches pour modifier leur ordre.</div>':"")+"</div></div>"+(reorderable?'<button class="btn" data-modal="document">+ Ajouter</button>':"")+"</div>"+
  '<div class="list document-list">'+(data.documents.length?data.documents.map(d=>'<div class="row doc-preview" data-doc-row="'+esc(d.id)+'" '+(reorderable?'draggable="true"':"")+'><div class="doc-drag-handle" aria-hidden="true">⋮⋮</div><div class="pdf-icon">PDF</div><div class="doc-info"><strong>'+esc(d.title)+'</strong><div class="muted">Version '+esc(d.version)+' · '+esc(d.file_name)+'</div></div><button class="preview-btn" data-preview="'+esc(d.id)+'">Prévisualiser</button>'+(reorderable?'<div class="doc-menu-wrap"><button class="doc-menu-btn" type="button" data-doc-menu="'+esc(d.id)+'" aria-label="Options">⋯</button><div class="doc-menu" data-menu-for="'+esc(d.id)+'" hidden><button type="button" data-doc-edit="'+esc(d.id)+'">Modifier</button><button type="button" class="danger" data-doc-delete="'+esc(d.id)+'">Supprimer</button></div></div>':"")+'</div>').join(""):'<div class="empty">Aucune fiche technique.</div>')+'</div>';
 }
 
@@ -170,21 +171,20 @@ function renderSettings(){
   const p=state.profile||{};
   const email=state.profile?.email||"";
   const initials=(p.full_name||"Aloïs Monier").split(/\\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase();
-  content.innerHTML='<div class="section-title"><div><h2>Paramètres</h2><div class="muted">Gérez votre profil et les réglages de CosyHub.</div></div></div>'+
+  content.innerHTML='<div class="section-title"><div class="section-title-left"><button class="back-button" type="button" data-back aria-label="Retour">←</button><div><h2>Paramètres</h2><div class="muted">Gérez votre profil et les réglages de PIZZA COSY.</div></div></div></div>'+
   '<div class="settings-grid">'+
   '<section class="card settings-card"><div class="settings-card-head"><div><div class="stat-label">Profil</div><h3>Mes informations</h3></div><div class="settings-avatar">'+esc(initials)+'</div></div>'+
   '<form id="profileSettingsForm" class="settings-form"><label>Nom affiché<input name="full_name" required value="'+esc(p.full_name||"")+'"></label>'+
   '<label>Email<input value="'+esc(email||"Non disponible")+'" disabled></label>'+
   '<label>Rôle<input value="'+esc(roleText(state.role))+'" disabled></label>'+
   '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
-  '<section class="card settings-card"><div class="stat-label">Application</div><h3>Préférences</h3>'+
-  '<div class="settings-row"><div><strong>Mode sombre</strong><div class="muted">Adapter l’affichage à vos préférences.</div></div><button type="button" class="btn-secondary" data-settings-theme>Changer</button></div>'+
-  '<div class="settings-row"><div><strong>Version</strong><div class="muted">CosyHub 1.1.51</div></div></div></section>'+
+  '<section class="card settings-card"><div class="stat-label">Application</div><h3>Application</h3>'+
+  '<div class="settings-row"><div><strong>Version</strong><div class="muted">PIZZA COSY 1.1.53</div></div></div></section>'+
   '<section class="card settings-card settings-danger"><div class="stat-label">Session</div><h3>Compte</h3><p class="muted">Déconnectez-vous de cet appareil. Vous pourrez vous reconnecter avec votre adresse e-mail et votre mot de passe.</p>'+
-  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div><div class="app-version settings-version">CosyHub 1.1.51</div>';
+  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div><div class="app-version settings-version">PIZZA COSY 1.1.53</div>';
 }
 function renderReports(){
- content.innerHTML='<div class="section-title"><h2>Rapports hebdomadaires</h2>'+(can("report")?'<button class="btn" data-modal="report">+ Nouveau rapport</button>':"")+'</div>'+
+ content.innerHTML='<div class="section-title"><div class="section-title-left"><button class="back-button" type="button" data-back aria-label="Retour">←</button><h2>Rapports hebdomadaires</h2></div>'+(can("report")?'<button class="btn" data-modal="report">+ Nouveau rapport</button>':"")+'</div>'+
  '<div class="list">'+(data.reports.length?data.reports.map(r=>'<div class="row"><div><strong>'+esc(r.week_label)+'</strong><div class="muted">CA '+(r.revenue??"—")+' € · '+(r.clients??"—")+' clients · Note '+(r.rating??"—")+'</div></div></div>').join(""):'<div class="empty">Aucun rapport enregistré.</div>')+'</div>';
 }
 
@@ -428,13 +428,6 @@ document.addEventListener("click",async e=>{
     showAuth(true);
     return;
   }
-  const theme=e.target.closest("[data-settings-theme]");
-  if(theme){
-    const dark=document.body.classList.toggle("dark");
-    localStorage.setItem("teamhub-theme",dark?"dark":"light");
-    updateThemeButton();
-    renderSettings();
-  }
 });
 document.addEventListener("submit",async e=>{
  if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=String(fd.get("full_name")||"").trim(); if(!name)return; const {error}=await supabase.from("profiles").update({full_name:name,updated_at:new Date().toISOString()}).eq("id",state.profile.id); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
@@ -481,9 +474,7 @@ document.addEventListener("submit",async e=>{
 });
 
 
-const savedTheme=localStorage.getItem("teamhub-theme");if(savedTheme==="dark")document.body.classList.add("dark");
-function updateThemeButton(){const dark=document.body.classList.contains("dark");themeToggle?.setAttribute("aria-pressed",String(dark));themeToggle?.setAttribute("aria-label",dark?"Désactiver le mode sombre":"Activer le mode sombre");}
-themeToggle?.addEventListener("click",()=>{const dark=document.body.classList.toggle("dark");localStorage.setItem("teamhub-theme",dark?"dark":"light");updateThemeButton();});
+document.body.classList.remove("dark");localStorage.removeItem("teamhub-theme");
 
 let booting=false;
 async function boot(){
@@ -533,6 +524,5 @@ async function boot(){
 }
 window.startCosyHubApp=boot;
 boot().catch(showRuntimeError);
-updateThemeButton();
 
 })();
