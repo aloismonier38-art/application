@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// CosyHub 1.1.47 — interface recentrée sur les fonctions essentielles.
+// CosyHub 1.1.48 — interface recentrée sur les fonctions essentielles.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -105,9 +105,13 @@ $("#signupForm")?.addEventListener("submit",handleSignup);
 
 
 async function loadProfile(){
-  const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",(await supabase.auth.getUser()).data.user.id).single();
+  const {data:{user},error:userError}=await supabase.auth.getUser();
+  if(userError)throw userError;
+  if(!user)throw new Error("Session utilisateur introuvable.");
+  const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",user.id).single();
   if(error)throw error;
-  state.profile={...profile,email:user.email||""};state.role=profile.role;
+  state.profile={...profile,email:user.email||""};
+  state.role=profile.role;
 }
 async function loadData(){
   const est=state.profile?.establishment_id;
