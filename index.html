@@ -29,16 +29,14 @@
         </form>
         <p id="authMessage" class="auth-message">Connectez-vous pour accéder à votre équipe.</p>
       </section>
-      <section class="auth-panel signup-panel">
-        <span class="auth-kicker">NOUVEAU MEMBRE</span>
-        <h2>Créer mon compte</h2>
-        <p class="auth-panel-text">Créez votre accès en quelques secondes.</p>
-        <form id="signupForm" class="auth-form">
-          <label>Email<input id="signupEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label>
-          <label>Mot de passe<input id="signupPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="6 caractères minimum"></label>
-          <button class="btn auth-signup-btn" id="signupSubmit" type="submit">Créer le compte</button>
-        </form>
-        <p class="auth-help">Votre profil et votre rôle seront associés à votre compte.</p>
+      <section class="auth-panel signup-panel auth-invite-panel">
+        <span class="auth-kicker">ACCÈS SÉCURISÉ</span>
+        <h2>Espace équipe</h2>
+        <p class="auth-panel-text">Votre accès est créé par un administrateur PIZZA COSY.</p>
+        <div class="auth-invite-info">
+          <div class="auth-invite-icon">✓</div>
+          <div><strong>Pas encore de compte ?</strong><span>Contactez votre administrateur pour recevoir votre invitation par e-mail.</span></div>
+        </div>
       </section>
     </div>
   </div>
