@@ -69,15 +69,34 @@ async function handleLogin(e){
   e.preventDefault();
   if(!authSubmit)return;
   authSubmit.disabled=true;
+  authInfo("Connexion en cours…");
   try{
     const email=$("#authEmail")?.value.trim()||"";
     const password=$("#authPassword")?.value||"";
-    const {error}=await supabase.auth.signInWithPassword({email,password});
+    if(!email||!password)throw new Error("Saisissez votre e-mail et votre mot de passe.");
+
+    const {data:loginData,error}=await supabase.auth.signInWithPassword({email,password});
     if(error)throw error;
+    if(!loginData?.session)throw new Error("Connexion non confirmée par Supabase.");
+
+    // Le boot automatique de la page peut encore être en cours au moment
+    // où l'utilisateur clique sur Connexion. On attend sa fin avant de
+    // relancer le chargement de l'espace.
+    let wait=0;
+    while(booting && wait<60){
+      await new Promise(resolve=>setTimeout(resolve,100));
+      wait++;
+    }
+
     showAuth(false);
     await boot();
-  }catch(err){authError(err?.message||"Impossible de se connecter.");}
-  finally{authSubmit.disabled=false;}
+  }catch(err){
+    console.error("PIZZA COSY login error:",err);
+    showAuth(true);
+    authError(err?.message||"Impossible de se connecter.");
+  }finally{
+    authSubmit.disabled=false;
+  }
 }
 
 async function handleSignup(e){
