@@ -203,7 +203,15 @@ function openUserModal(user){
     const fields={full_name:String(fd.get("full_name")||"").trim(),phone:String(fd.get("phone")||"").trim(),login_email:String(fd.get("login_email")||"").trim(),role:String(fd.get("role")||"employee"),is_active:fd.get("is_active")==="on"};
     const msg=$("#userAccessMessage");
     try{
-      if(!editing){msg.textContent="La création du compte de connexion sera disponible ici.";return;}
+      if(!editing){
+        msg.textContent="Création de l’invitation…";
+        const {data:result,error}=await supabase.functions.invoke("invite-user",{body:{full_name:fields.full_name,phone:fields.phone,login_email:fields.login_email,role:fields.role}});
+        if(error)throw error;
+        if(result?.error)throw new Error(result.error);
+        await loadData();render();closeModal();
+        alert("Invitation envoyée à "+fields.login_email+".");
+        return;
+      }
       const {error}=await supabase.from("profiles").update(fields).eq("id",u.id);
       if(error)throw error;
       await loadData();render();closeModal();
