@@ -102,6 +102,43 @@ async function handleSignup(e){
 }
 
 authForm?.addEventListener("submit",handleLogin);
+$("#forgotPassword")?.addEventListener("click",async()=>{
+  const email=$("#authEmail")?.value.trim()||"";
+  if(!email){authInfo("Saisissez d’abord votre adresse e-mail.");$("#authEmail")?.focus();return;}
+  const button=$("#forgotPassword");
+  button.disabled=true;
+  try{
+    const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+    if(error)throw error;
+    authInfo("Si cette adresse correspond à un compte, un e-mail de réinitialisation vient d’être envoyé.");
+  }catch(err){authError(err?.message||"Impossible d’envoyer l’e-mail de réinitialisation.");}
+  finally{button.disabled=false;}
+});
+
+function openPasswordRecoveryModal(){
+  if(document.getElementById("passwordRecoveryModal"))return;
+  document.body.insertAdjacentHTML("beforeend",'<div id="passwordRecoveryModal" class="modal-backdrop first-login-backdrop"><div class="first-login-card"><div class="first-login-icon">✓</div><span class="user-modal-kicker">SÉCURITÉ</span><h2>Nouveau mot de passe</h2><p class="first-login-intro">Choisissez un nouveau mot de passe pour votre espace PIZZA COSY.</p><form id="passwordRecoveryForm" class="first-login-form"><label>Nouveau mot de passe<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="8 caractères minimum"></label><label>Confirmer<input name="password_confirm" type="password" required minlength="8" autocomplete="new-password"></label><button class="btn" type="submit">Enregistrer le nouveau mot de passe</button><p id="passwordRecoveryMessage" class="user-modal-message"></p></form></div></div>');
+  $("#passwordRecoveryForm")?.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const fd=new FormData(e.target);
+    const password=String(fd.get("password")||"");
+    const confirm=String(fd.get("password_confirm")||"");
+    const msg=$("#passwordRecoveryMessage");
+    if(password.length<8){msg.textContent="Le mot de passe doit contenir au moins 8 caractères.";return;}
+    if(password!==confirm){msg.textContent="Les mots de passe ne correspondent pas.";return;}
+    const {error}=await supabase.auth.updateUser({password});
+    if(error){msg.textContent=error.message;return;}
+    document.getElementById("passwordRecoveryModal")?.remove();
+    authInfo("Mot de passe modifié. Vous pouvez maintenant utiliser votre espace PIZZA COSY.");
+    showAuth(false);
+    await boot();
+  });
+}
+
+supabase.auth.onAuthStateChange((event)=>{
+  if(event==="PASSWORD_RECOVERY")setTimeout(openPasswordRecoveryModal,0);
+});
+
 $("#signupForm")?.addEventListener("submit",handleSignup);
 
 
