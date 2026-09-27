@@ -22,12 +22,12 @@ supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB
 
 const APP_VERSION="1.1.88";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
-const data={tasks:[],documents:[],requests:[],users:[]};
+const data={tasks:[],documents:[],requests:[],users:[],taskPeople:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
-const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
+const titles={dashboard:"Tableau de bord",tasks:"Tâches",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
@@ -125,9 +125,17 @@ async function loadUsers(){
   data.users=users||[];
 }
 async function loadData(){
-  const {data:documents,error}=await supabase.from("documents").select("*").order("updated_at",{ascending:false});
-  if(error)throw error;
-  data.documents=documents||[];
+  const [documents,tasks,people]=await Promise.all([
+    supabase.from("documents").select("*").order("updated_at",{ascending:false}),
+    supabase.from("tasks").select("*").order("due_date",{ascending:true}).order("created_at",{ascending:false}),
+    supabase.from("profiles").select("id,full_name,is_active").eq("is_active",true).order("full_name",{ascending:true})
+  ]);
+  if(documents.error)throw documents.error;
+  if(tasks.error)throw tasks.error;
+  if(people.error)throw people.error;
+  data.documents=documents.data||[];
+  data.tasks=tasks.data||[];
+  data.taskPeople=people.data||[];
   await loadUsers();
 }
 
@@ -157,15 +165,29 @@ function renderDocuments(){
 }
 
 function renderTasks(){
- const open=data.tasks.filter(t=>!t.done),done=data.tasks.filter(t=>t.done&&today(t.completedAt)),all=data.tasks;
- const list=state.taskFilter==="done"?done:state.taskFilter==="all"?all:open;
- const filter=(label,value)=>'<button class="filter-btn '+(state.taskFilter===value?"active":"")+'" data-filter="'+value+'">'+label+'</button>';
- content.innerHTML='<div class="section-title"><div><h2>Tâches</h2><div class="muted">À faire, échéances et récurrences</div></div>'+(can("task")?'<button class="btn" data-modal="task">+ Nouvelle</button>':"")+'</div>'+
- '<div class="task-filters">'+filter("À faire","open")+filter("Validées aujourd’hui","done")+filter("Toutes","all")+'</div>'+
- '<div class="task-summary"><span>'+open.length+' à faire</span><span>'+done.length+' validée'+(done.length>1?"s":"")+' aujourd’hui</span></div>'+
- '<div class="list">'+(list.length?list.map(taskCard).join(""):'<div class="empty">Aucune tâche dans cette vue.</div>')+'</div>'+
- '<div class="section-title"><h2>Planning</h2><span class="muted">Aperçu de la semaine</span></div>'+
- '<div class="mini-calendar">'+["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(d=>'<div class="day"><b>'+d+'</b></div>').join("")+'</div>';
+  const todayKey=new Date().toISOString().slice(0,10);
+  const open=data.tasks.filter(t=>t.status!=="done");
+  const todayTasks=open.filter(t=>t.due_date===todayKey);
+  const completed=data.tasks.filter(t=>t.status==="done");
+  const list=state.taskFilter==="today"?todayTasks:state.taskFilter==="done"?completed:open;
+  const personName=id=>data.taskPeople.find(p=>p.id===id)?.full_name||"Équipe";
+  const priority=(v)=>({normal:"Normale",high:"Haute",urgent:"Urgente"})[v]||"Normale";
+  const row=t=>{
+    const overdue=t.status!=="done" && t.due_date && t.due_date<todayKey;
+    return '<div class="row task-row '+(t.status==="done"?"task-done":"")+'">'+
+      '<input class="check" type="checkbox" data-action="toggle-task" data-id="'+esc(t.id)+'" '+(t.status==="done"?"checked":"")+'>'+
+      '<div class="task-main"><strong>'+esc(t.title)+'</strong>'+
+      '<div class="muted">'+esc(personName(t.assigned_to))+' · '+dateLabel(t.due_date)+(t.recurrence?" · "+esc(t.recurrence):"")+'</div>'+
+      '<div class="task-meta"><span class="tag '+(t.priority==="urgent"?"danger":"")+'">'+esc(priority(t.priority))+'</span>'+
+      (overdue?'<span class="tag danger">En retard</span>':"")+
+      (t.status==="done"?'<span class="tag">Terminée</span>':"")+
+      '</div></div></div>';
+  };
+  const filter=(label,value)=>'<button class="filter-btn '+(state.taskFilter===value?"active":"")+'" data-filter="'+value+'">'+label+'</button>';
+  content.innerHTML='<div class="section-title"><div><h2>Tâches</h2><div class="muted">Organisez le travail quotidien de l’équipe.</div></div>'+(can("task")?'<button class="btn" data-modal="task">+ Nouvelle tâche</button>':"")+'</div>'+
+    '<div class="task-filters">'+filter("À faire","open")+filter("Aujourd’hui","today")+filter("Terminées","done")+'</div>'+
+    '<div class="task-summary"><span>'+open.length+' à faire</span><span>'+todayTasks.length+' aujourd’hui</span><span>'+completed.length+' terminée'+(completed.length>1?"s":"")+'</span></div>'+
+    '<div class="list">'+(list.length?list.map(row).join(""):'<div class="empty">Aucune tâche dans cette vue.</div>')+'</div>';
 }
 
 function renderRequests(){
@@ -433,7 +455,7 @@ async function openModal(type){
  m.innerHTML='<div class="modal"><div class="modal-head"><div><div class="eyebrow">Équipe</div><h2>'+names[type]+'</h2></div><button class="modal-close" data-close>×</button></div><form id="modalForm" data-type="'+type+'">'+form+'<div id="uploadProgress" class="upload-progress" hidden><div class="upload-progress-head"><span id="uploadProgressText">Préparation du téléversement…</span><strong>0 %</strong></div><div class="upload-progress-track"><div id="uploadProgressBar" class="upload-progress-bar"></div></div></div><div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn">'+(type==="document-edit"?"Enregistrer":"Créer")+'</button></div></form></div>';
  document.body.appendChild(m);
  if(type==="task"){
-   const {data:people}=await supabase.from("profiles").select("id,full_name").eq("active",true).order("full_name");
+   const {data:people}=await supabase.from("profiles").select("id,full_name").eq("is_active",true).order("full_name");
    $("#assigneeSelect").innerHTML=(people||[]).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.full_name)+'</option>').join("");
  }
  m.querySelector("input,select,textarea")?.focus();
@@ -475,6 +497,10 @@ document.addEventListener("change",async e=>{
    const id=e.target.dataset.id,done=e.target.checked;
    const {error}=await supabase.from("tasks").update({status:done?"done":"todo",completed_at:done?new Date().toISOString():null}).eq("id",id);
    if(error){e.target.checked=!done;alert(error.message);return;}
+   if(done){
+     const user=(await supabase.auth.getUser()).data.user;
+     await supabase.from("task_completions").insert({task_id:id,completed_by:user?.id||null});
+   }
    await loadData();render();
  }
 });
@@ -485,7 +511,7 @@ document.addEventListener("click",async e=>{
     logout.disabled=true;
     const {error}=await supabase.auth.signOut();
     if(error){logout.disabled=false;alert("Impossible de se déconnecter : "+error.message);return;}
-    state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];
+    state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];data.taskPeople=[];
     showAuth(true);
     return;
   }
