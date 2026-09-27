@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// CosyHub 1.1.45 — version visible uniquement connexion et paramètres.
+// CosyHub 1.1.47 — interface recentrée sur les fonctions essentielles.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -26,7 +26,7 @@ const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle"),themeToggle=$("#themeToggle"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
-const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",tasks:"To-do list",requests:"Besoins & interventions",reports:"Rapports hebdomadaires",settings:"Paramètres"};
+const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",reports:"Rapports hebdomadaires",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
@@ -133,13 +133,11 @@ function taskCard(t){
 }
 
 function renderDashboard(){
- const open=data.tasks.filter(t=>!t.done),lateCount=open.filter(t=>late(t.due)>0).length;
- content.innerHTML='<div class="grid"><div class="card"><div class="stat-label">Tâches ouvertes</div><div class="stat-value">'+open.length+'</div><div class="stat-note">'+lateCount+' en retard</div></div>'+
- '<div class="card"><div class="stat-label">Besoins en cours</div><div class="stat-value">'+data.requests.filter(r=>r.status!=="closed").length+'</div><div class="stat-note">Demandes enregistrées</div></div>'+
+ content.innerHTML='<div class="grid">'+
  '<div class="card"><div class="stat-label">Fiches techniques</div><div class="stat-value">'+data.documents.length+'</div><div class="stat-note">Documents enregistrés</div></div>'+
- '<div class="card"><div class="stat-label">Rapport hebdo</div><div class="stat-value">'+(data.reports[0]?.week_label||"—")+'</div><div class="stat-note">'+(data.reports.length?"Dernier rapport":"À compléter")+'</div></div></div>'+
- '<div class="section-title"><h2>Mes prochaines tâches</h2><button class="btn" data-view="tasks">Voir tout</button></div>'+
- '<div class="list">'+open.slice(0,3).map(taskCard).join("")+'</div>';
+ '<div class="card"><div class="stat-label">Rapports hebdomadaires</div><div class="stat-value">'+data.reports.length+'</div><div class="stat-note">'+(data.reports.length?"Rapports enregistrés":"À compléter")+'</div></div></div>'+
+ '<div class="section-title"><h2>Bienvenue sur CosyHub</h2></div>'+
+ '<div class="empty">Votre espace équipe est prêt. Utilisez les sections disponibles pour gérer les fiches techniques et les rapports.</div>';
 }
 
 function renderDocuments(){
@@ -176,9 +174,9 @@ function renderSettings(){
   '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
   '<section class="card settings-card"><div class="stat-label">Application</div><h3>Préférences</h3>'+
   '<div class="settings-row"><div><strong>Mode sombre</strong><div class="muted">Adapter l’affichage à vos préférences.</div></div><button type="button" class="btn-secondary" data-settings-theme>Changer</button></div>'+
-  '<div class="settings-row"><div><strong>Version</strong><div class="muted">CosyHub 1.1.45</div></div></div></section>'+
+  '<div class="settings-row"><div><strong>Version</strong><div class="muted">CosyHub 1.1.47</div></div></div></section>'+
   '<section class="card settings-card settings-danger"><div class="stat-label">Session</div><h3>Compte</h3><p class="muted">Déconnectez-vous de cet appareil. Vous pourrez vous reconnecter avec votre adresse e-mail et votre mot de passe.</p>'+
-  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div><div class="app-version settings-version">CosyHub 1.1.45</div>';
+  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div><div class="app-version settings-version">CosyHub 1.1.47</div>';
 }
 function renderReports(){
  content.innerHTML='<div class="section-title"><h2>Rapports hebdomadaires</h2>'+(can("report")?'<button class="btn" data-modal="report">+ Nouveau rapport</button>':"")+'</div>'+
@@ -187,7 +185,7 @@ function renderReports(){
 
 function render(){
  pageTitle.textContent=titles[state.view];
- ({dashboard:renderDashboard,documents:renderDocuments,tasks:renderTasks,requests:renderRequests,reports:renderReports,settings:renderSettings}[state.view]||renderDashboard)();
+ ({dashboard:renderDashboard,documents:renderDocuments,reports:renderReports,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
  roleToggle.textContent="Paramètres"; if(sidebarUserName)sidebarUserName.textContent=state.profile?.full_name||"Mon profil";
