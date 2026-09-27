@@ -194,7 +194,7 @@ function openUserModal(user){
         '<label>Profil d’accès<select name="role"><option value="employee" '+(u.role==="employee"?"selected":"")+'>Salarié</option><option value="manager" '+(u.role==="manager"?"selected":"")+'>Manager</option><option value="admin" '+(u.role==="admin"?"selected":"")+'>Administrateur</option></select></label>'+
         '<div class="user-access-state"><span><strong>Compte actif</strong><small>Autorise la connexion à l’espace équipe.</small></span><label class="switch"><input name="is_active" type="checkbox" '+(u.is_active!==false?"checked":"")+'><span class="switch-track"></span></label></div>'+
       '</div>'+
-      (editing?'<div class="user-modal-security"><div><strong>Sécurité du compte</strong><small>Le mot de passe peut être réinitialisé par e-mail.</small></div><button type="button" class="btn-link" data-reset-user="'+esc(u.id)+'">Réinitialiser le mot de passe</button></div>':"")+
+      (editing?'<div class="user-modal-security"><div><strong>Sécurité du compte</strong><small>Le mot de passe peut être réinitialisé par e-mail.</small></div><div class="user-modal-security-actions"><button type="button" class="btn-link" data-reset-user="'+esc(u.id)+'">Réinitialiser le mot de passe</button><button type="button" class="btn-danger" data-delete-user="'+esc(u.id)+'">Supprimer définitivement</button></div></div>':"")+
       '<div class="user-modal-footer"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn" type="submit">Enregistrer</button></div><p id="userAccessMessage" class="user-modal-message"></p>'+
     '</form></div></div>');
   $("#userAccessForm")?.addEventListener("submit",async e=>{
@@ -451,6 +451,20 @@ document.addEventListener("click",async e=>{
  const userAdd=e.target.closest("[data-user-add]");if(userAdd){openUserModal(null);return;}
  const userEdit=e.target.closest("[data-user-edit]");if(userEdit){openUserModal(data.users.find(u=>u.id===userEdit.dataset.userEdit));return;}
  const resetUser=e.target.closest("[data-reset-user]");if(resetUser){const u=data.users.find(x=>x.id===resetUser.dataset.resetUser);if(u?.login_email){const {error}=await supabase.auth.resetPasswordForEmail(u.login_email,{redirectTo:window.location.origin+window.location.pathname});alert(error?error.message:"Lien de réinitialisation envoyé.");}return;}
+ const deleteUser=e.target.closest("[data-delete-user]");if(deleteUser){
+   const u=data.users.find(x=>x.id===deleteUser.dataset.deleteUser);
+   if(!u)return;
+   if(!confirm('Supprimer définitivement le compte de « '+(u.full_name||u.login_email||"cet utilisateur")+' ?\\n\\nLe compte ne pourra plus se connecter. Cette action est irréversible.'))return;
+   deleteUser.disabled=true;
+   try{
+     const {data:result,error}=await supabase.functions.invoke("delete-user",{body:{user_id:u.id}});
+     if(error)throw error;
+     if(result?.error)throw new Error(result.error);
+     closeModal();await loadData();render();
+     alert("Compte supprimé.");
+   }catch(err){deleteUser.disabled=false;alert(err.message||"Impossible de supprimer le compte.");}
+   return;
+ }
  const modal=e.target.closest("[data-modal]");if(modal){openModal(modal.dataset.modal).catch(err=>alert("Impossible d’ouvrir le formulaire : "+(err?.message||"Erreur inconnue")));return;}
  const filter=e.target.closest("[data-filter]");if(filter){state.taskFilter=filter.dataset.filter;renderTasks();return;}
  const preview=e.target.closest("[data-preview]");if(preview){await openPreview(preview.dataset.preview);return;}
