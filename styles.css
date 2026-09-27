@@ -213,7 +213,7 @@ html body.dark .sidebar .user-card{border-color:#2a5145!important}
 .doc-preview{position:relative}.doc-info{min-width:0}.doc-info strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.doc-menu-wrap{position:relative;align-self:center}.doc-menu-btn{width:36px;height:36px;border:1px solid var(--line);background:#fff;color:var(--green);border-radius:9px;font-size:22px;line-height:1;cursor:pointer}.doc-menu{position:absolute;right:0;top:42px;z-index:20;min-width:150px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.14)}.doc-menu[hidden]{display:none}.doc-menu button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:10px 12px;border-radius:7px;color:var(--green);cursor:pointer;font:inherit;font-size:13px}.doc-menu button:hover{background:var(--pink-light)}.doc-menu button.danger{color:#b94d61}.doc-menu button.danger:hover{background:#f8e3e7}
 @media(max-width:850px){.doc-preview{grid-template-columns:46px minmax(0,1fr) auto auto}.doc-preview .preview-btn{padding:8px 9px}.doc-menu-btn{width:34px;height:34px}}
 
-.app-version{font-size:10px;color:#8a928d;white-space:nowrap;align-self:center}.auth-build{color:#8a928d!important}@media(max-width:850px){.app-version{font-size:9px}.top-actions{gap:7px}}
+.auth-build{color:#8a928d!important}@media(max-width:850px){.top-actions{gap:7px}}
 
 /* AUTH SPLIT v1.1.24 */
 .auth-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:28px;background:var(--cream);overflow:auto}
@@ -231,11 +231,11 @@ html body.dark .sidebar .user-card{border-color:#2a5145!important}
 .auth-form input:focus{outline:2px solid rgba(227,143,156,.35);border-color:#d9a0aa}
 .auth-form .btn{margin-top:5px;width:100%;padding:13px}
 .auth-signup-btn{background:#e38f9c;color:#174235}.auth-message{margin:16px 0 0;font-size:12px;color:#748078;min-height:18px}.auth-help{font-size:11px;color:#8a928d;margin-top:16px}
-.app-version{position:fixed;right:14px;bottom:10px;z-index:900;font-size:9px;font-weight:500;letter-spacing:.02em;color:#8a928d;pointer-events:none}
-body.auth-open .app-version{bottom:10px}
+
+body.auth-open 
 @media(max-width:700px){
  .auth-gate{padding:22px 14px 42px;align-items:start}.auth-shell{width:100%;padding-top:18px}.auth-panels{grid-template-columns:1fr;border-radius:20px}.login-panel{border-right:0;border-bottom:1px solid var(--line)}.auth-panel{padding:30px 24px;min-height:auto}.auth-panel h2{font-size:26px}.auth-panel-text{margin-bottom:22px}.auth-brand-top{margin-bottom:4px}
- .app-version{right:10px;bottom:74px;font-size:8px}.auth-open .app-version{bottom:10px}
+ .auth-open 
 }
 
 /* AUTH CLEAN LAYOUT v1.1.25 */
@@ -243,12 +243,12 @@ body.auth-open .app-version{bottom:10px}
 .auth-panel{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 45px rgba(0,0,0,.07)}
 .login-panel{border-right:1px solid var(--line)}
 .signup-panel{background:#fff}
-.app-version{position:fixed!important;right:14px!important;bottom:10px!important;z-index:2000!important;font-size:9px!important;font-weight:500!important;letter-spacing:.02em!important;color:#8a928d!important;pointer-events:none!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+
 @media(max-width:700px){
  .auth-panels{gap:14px}
  .auth-panel{border:0;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.055)}
  .login-panel{border-bottom:0}
- .app-version{right:10px!important;bottom:10px!important}
+ 
 }
 
 /* COSYHUB LOGO v1.1.26 */
@@ -272,7 +272,7 @@ body.dark .settings-form label{color:#b8c5bf}body.dark .settings-form input{back
 .settings-button{display:inline-flex!important;align-items:center;justify-content:center;gap:6px;padding:8px 13px!important;min-width:auto!important;font-size:14px!important;font-weight:700!important}.settings-button svg{display:none}.settings-button span{display:inline}@media(max-width:850px){.settings-button{padding:8px 13px!important}.settings-button span{display:inline}}
 
 /* CosyHub 1.1.45 — version uniquement connexion + paramètres */
-.auth-version{position:fixed!important;right:14px!important;bottom:10px!important;z-index:2000!important}.settings-version{position:fixed!important;right:14px!important;bottom:74px!important;z-index:2000!important}.app-version{pointer-events:none!important}@media(max-width:700px){.auth-version{right:10px!important;bottom:10px!important}.settings-version{right:10px!important;bottom:74px!important}}
+.auth-version{position:fixed!important;right:14px!important;bottom:10px!important;z-index:2000!important}.settings-version{position:fixed!important;right:14px!important;bottom:74px!important;z-index:2000!important}@media(max-width:700px){.auth-version{right:10px!important;bottom:10px!important}.settings-version{right:10px!important;bottom:74px!important}}
 
 .upload-progress{margin-top:16px;padding:12px 14px;border:1px solid #E5E2DC;border-radius:12px;background:#F9F8F4}
 .upload-progress-head{display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:13px;color:#748078;margin-bottom:8px}
@@ -471,5 +471,10 @@ body.dark .doc-preview.drag-over{border-color:#e38f9c;background:#292220}
 
 
 /* PIZZA COSY 1.1.60 — version affichée uniquement à côté du nom */
-.app-version-inline{display:inline-block;margin-left:5px;font-size:9px;line-height:1;font-weight:500;letter-spacing:.02em;opacity:.65;vertical-align:middle}
+.app-version-inline{display:block;margin-top:1px;font-size:9px;line-height:1;font-weight:500;letter-spacing:.02em;opacity:.65;vertical-align:middle}
 .auth-brand-top .app-version-inline{font-size:9px;color:var(--muted)}
+
+
+/* PIZZA COSY 1.1.61 — aucune version en bas de page */
+.app-version{display:none!important}
+.app-version-inline{display:block!important;font-size:9px!important;font-weight:500!important;line-height:1!important;margin-top:2px!important;opacity:.65!important}
