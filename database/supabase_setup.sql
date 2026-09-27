@@ -202,3 +202,45 @@ with check (bucket_id='team-documents' and public.is_manager() and (storage.fold
 drop policy if exists team_documents_delete on storage.objects;
 create policy team_documents_delete on storage.objects for delete to authenticated
 using (bucket_id='team-documents' and public.is_manager() and (storage.foldername(name))[1] = public.my_establishment()::text);
+
+
+-- Gestion des accès utilisateurs
+alter table public.profiles add column if not exists phone text;
+alter table public.profiles add column if not exists login_email text;
+alter table public.profiles add column if not exists is_active boolean not null default true;
+
+update public.profiles p
+set login_email = u.email
+from auth.users u
+where u.id = p.id
+  and (p.login_email is null or p.login_email = '');
+
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select on public.profiles
+for select to authenticated
+using (id = auth.uid() or public.is_admin());
+
+drop policy if exists profiles_update_self on public.profiles;
+create policy profiles_update_self on public.profiles
+for update to authenticated
+using (id = auth.uid() or public.is_admin())
+with check (id = auth.uid() or public.is_admin());
+
+create or replace function public.sync_profile_login_email()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.profiles
+  set login_email = new.email
+  where id = new.id;
+  return new;
+end;
+$$;
+
+drop trigger if exists sync_profile_email on auth.users;
+create trigger sync_profile_email
+after update of email on auth.users
+for each row execute procedure public.sync_profile_login_email();
