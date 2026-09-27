@@ -530,6 +530,32 @@ document.addEventListener("submit",async e=>{
 document.body.classList.remove("dark");localStorage.removeItem("teamhub-theme");
 
 let booting=false;
+
+function openFirstLoginModal(){
+  if(document.getElementById("firstLoginModal"))return;
+  const p=state.profile||{};
+  document.body.insertAdjacentHTML("beforeend",'<div id="firstLoginModal" class="modal-backdrop first-login-backdrop"><div class="first-login-card"><div class="first-login-icon">✓</div><span class="user-modal-kicker">PREMIÈRE CONNEXION</span><h2>Bienvenue chez PIZZA COSY</h2><p class="first-login-intro">Finalisez votre accès avant de rejoindre votre espace équipe.</p><form id="firstLoginForm" class="first-login-form"><label>Nom et prénom<input name="full_name" required value="'+esc(p.full_name||"")+'"></label><label>Numéro de téléphone<input name="phone" type="tel" value="'+esc(p.phone||"")+'" placeholder="06 00 00 00 00"></label><label>Nouveau mot de passe<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="8 caractères minimum"></label><label>Confirmer le mot de passe<input name="password_confirm" type="password" required minlength="8" autocomplete="new-password"></label><button class="btn" type="submit">Finaliser mon accès</button><p id="firstLoginMessage" class="user-modal-message"></p></form></div></div>');
+  $("#firstLoginForm")?.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const fd=new FormData(e.target);
+    const password=String(fd.get("password")||"");
+    const confirm=String(fd.get("password_confirm")||"");
+    const msg=$("#firstLoginMessage");
+    if(password!==confirm){msg.textContent="Les mots de passe ne correspondent pas.";return;}
+    if(password.length<8){msg.textContent="Le mot de passe doit contenir au moins 8 caractères.";return;}
+    const fields={full_name:String(fd.get("full_name")||"").trim(),phone:String(fd.get("phone")||"").trim()};
+    try{
+      const {error:passError}=await supabase.auth.updateUser({password});
+      if(passError)throw passError;
+      const {error:profileError}=await supabase.from("profiles").update({...fields,must_set_password:false}).eq("id",state.profile.id);
+      if(profileError)throw profileError;
+      state.profile={...state.profile,...fields,must_set_password:false};
+      document.getElementById("firstLoginModal")?.remove();
+      render();
+    }catch(err){msg.textContent=err.message||"Impossible de finaliser votre accès.";}
+  });
+}
+
 async function boot(){
   if(booting)return;
   booting=true;
@@ -549,6 +575,7 @@ async function boot(){
         new Promise((_,reject)=>setTimeout(()=>reject(new Error("Le profil met trop de temps à charger.")),6000))
       ]);
       render();
+      if(state.profile?.must_set_password) openFirstLoginModal();
     }catch(profileError){
       console.error("PIZZA COSY profile loading error:",profileError);
       state.profile=null;
