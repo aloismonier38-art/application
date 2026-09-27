@@ -273,3 +273,9 @@ body.dark .settings-form label{color:#b8c5bf}body.dark .settings-form input{back
 
 /* CosyHub 1.1.45 — version uniquement connexion + paramètres */
 .auth-version{position:fixed!important;right:14px!important;bottom:10px!important;z-index:2000!important}.settings-version{position:fixed!important;right:14px!important;bottom:74px!important;z-index:2000!important}.app-version{pointer-events:none!important}@media(max-width:700px){.auth-version{right:10px!important;bottom:10px!important}.settings-version{right:10px!important;bottom:74px!important}}
+
+.upload-progress{margin-top:16px;padding:12px 14px;border:1px solid #E5E2DC;border-radius:12px;background:#F9F8F4}
+.upload-progress-head{display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:13px;color:#748078;margin-bottom:8px}
+.upload-progress-head strong{color:#205040;font-size:13px}
+.upload-progress-track{height:8px;background:#E5E2DC;border-radius:999px;overflow:hidden}
+.upload-progress-bar{height:100%;width:0;background:#205040;border-radius:999px;transition:width .15s ease}
