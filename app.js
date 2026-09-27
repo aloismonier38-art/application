@@ -2,7 +2,7 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
-// CosyHub 1.1.49 — interface recentrée sur les fonctions essentielles.
+// CosyHub 1.1.50 — réorganisation des fiches techniques par glisser-déposer.
 // CosyHub 1.1.39: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
@@ -145,8 +145,9 @@ function renderDashboard(){
 }
 
 function renderDocuments(){
- content.innerHTML='<div class="section-title"><h2>Fiches techniques</h2>'+(can("document")?'<button class="btn" data-modal="document">+ Ajouter</button>':"")+'</div>'+
- '<div class="list">'+(data.documents.length?data.documents.map(d=>'<div class="row doc-preview"><div class="pdf-icon">PDF</div><div class="doc-info"><strong>'+esc(d.title)+'</strong><div class="muted">Version '+esc(d.version)+' · '+esc(d.file_name)+'</div></div><button class="preview-btn" data-preview="'+esc(d.id)+'">Prévisualiser</button>'+(can("document")?'<div class="doc-menu-wrap"><button class="doc-menu-btn" type="button" data-doc-menu="'+esc(d.id)+'" aria-label="Options">⋯</button><div class="doc-menu" data-menu-for="'+esc(d.id)+'" hidden><button type="button" data-doc-edit="'+esc(d.id)+'">Modifier</button><button type="button" class="danger" data-doc-delete="'+esc(d.id)+'">Supprimer</button></div></div>':"")+'</div>').join(""):'<div class="empty">Aucune fiche technique.</div>')+'</div>';
+ const reorderable=can("document");
+ content.innerHTML='<div class="section-title"><div><h2>Fiches techniques</h2>'+(reorderable?'<div class="muted">Glissez-déposez les fiches pour modifier leur ordre.</div>':"")+"</div>"+(reorderable?'<button class="btn" data-modal="document">+ Ajouter</button>':"")+"</div>"+
+ '<div class="list document-list">'+(data.documents.length?data.documents.map(d=>'<div class="row doc-preview" data-doc-row="'+esc(d.id)+'" '+(reorderable?'draggable="true"':"")+'><div class="doc-drag-handle" aria-hidden="true">⋮⋮</div><div class="pdf-icon">PDF</div><div class="doc-info"><strong>'+esc(d.title)+'</strong><div class="muted">Version '+esc(d.version)+' · '+esc(d.file_name)+'</div></div><button class="preview-btn" data-preview="'+esc(d.id)+'">Prévisualiser</button>'+(reorderable?'<div class="doc-menu-wrap"><button class="doc-menu-btn" type="button" data-doc-menu="'+esc(d.id)+'" aria-label="Options">⋯</button><div class="doc-menu" data-menu-for="'+esc(d.id)+'" hidden><button type="button" data-doc-edit="'+esc(d.id)+'">Modifier</button><button type="button" class="danger" data-doc-delete="'+esc(d.id)+'">Supprimer</button></div></div>':"")+'</div>').join(""):'<div class="empty">Aucune fiche technique.</div>')+'</div>';
 }
 
 function renderTasks(){
@@ -178,9 +179,9 @@ function renderSettings(){
   '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
   '<section class="card settings-card"><div class="stat-label">Application</div><h3>Préférences</h3>'+
   '<div class="settings-row"><div><strong>Mode sombre</strong><div class="muted">Adapter l’affichage à vos préférences.</div></div><button type="button" class="btn-secondary" data-settings-theme>Changer</button></div>'+
-  '<div class="settings-row"><div><strong>Version</strong><div class="muted">CosyHub 1.1.47</div></div></div></section>'+
+  '<div class="settings-row"><div><strong>Version</strong><div class="muted">CosyHub 1.1.50</div></div></div></section>'+
   '<section class="card settings-card settings-danger"><div class="stat-label">Session</div><h3>Compte</h3><p class="muted">Déconnectez-vous de cet appareil. Vous pourrez vous reconnecter avec votre adresse e-mail et votre mot de passe.</p>'+
-  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div><div class="app-version settings-version">CosyHub 1.1.47</div>';
+  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div><div class="app-version settings-version">CosyHub 1.1.50</div>';
 }
 function renderReports(){
  content.innerHTML='<div class="section-title"><h2>Rapports hebdomadaires</h2>'+(can("report")?'<button class="btn" data-modal="report">+ Nouveau rapport</button>':"")+'</div>'+
@@ -249,6 +250,82 @@ async function uploadDocumentWithProgress(path,file){
     xhr.send(file);
   });
 }
+
+let draggingDocumentId=null;
+
+async function persistDocumentOrder(){
+  const base=Date.now();
+  const results=await Promise.all(data.documents.map((d,index)=>
+    supabase.from("documents").update({updated_at:new Date(base-index*1000).toISOString()}).eq("id",d.id)
+  ));
+  for(const result of results)if(result.error)throw result.error;
+}
+
+async function moveDocument(id,targetId){
+  if(!can("document")||!id||id===targetId)return;
+  const from=data.documents.findIndex(d=>d.id===id);
+  const target=data.documents.findIndex(d=>d.id===targetId);
+  if(from<0||target<0)return;
+  const [item]=data.documents.splice(from,1);
+  data.documents.splice(target,0,item);
+  try{
+    await persistDocumentOrder();
+    render();
+  }catch(err){
+    await loadData();
+    render();
+    alert("Impossible d’enregistrer le nouvel ordre : "+(err?.message||"Erreur inconnue"));
+  }
+}
+
+document.addEventListener("dragstart",e=>{
+  const row=e.target.closest("[data-doc-row]");
+  if(!row||!can("document"))return;
+  draggingDocumentId=row.dataset.docRow;
+  row.classList.add("is-dragging");
+  if(e.dataTransfer){
+    e.dataTransfer.effectAllowed="move";
+    e.dataTransfer.setData("text/plain",draggingDocumentId);
+  }
+});
+document.addEventListener("dragover",e=>{
+  const row=e.target.closest("[data-doc-row]");
+  if(!row||!draggingDocumentId||row.dataset.docRow===draggingDocumentId)return;
+  e.preventDefault();
+  document.querySelectorAll("[data-doc-row].drag-over").forEach(x=>x.classList.remove("drag-over"));
+  row.classList.add("drag-over");
+  if(e.dataTransfer)e.dataTransfer.dropEffect="move";
+});
+document.addEventListener("drop",async e=>{
+  const row=e.target.closest("[data-doc-row]");
+  if(!row||!draggingDocumentId)return;
+  e.preventDefault();
+  const targetId=row.dataset.docRow;
+  document.querySelectorAll("[data-doc-row].drag-over").forEach(x=>x.classList.remove("drag-over"));
+  const rect=row.getBoundingClientRect();
+  const insertAfter=e.clientY>rect.top+rect.height/2;
+  const sourceIndex=data.documents.findIndex(d=>d.id===draggingDocumentId);
+  const targetIndex=data.documents.findIndex(d=>d.id===targetId);
+  let adjustedTarget=targetIndex+(insertAfter?1:0);
+  if(sourceIndex<adjustedTarget)adjustedTarget--;
+  const [item]=data.documents.splice(sourceIndex,1);
+  data.documents.splice(Math.max(0,Math.min(data.documents.length,adjustedTarget)),0,item);
+  try{
+    await persistDocumentOrder();
+    render();
+  }catch(err){
+    await loadData();
+    render();
+    alert("Impossible d’enregistrer le nouvel ordre : "+(err?.message||"Erreur inconnue"));
+  }
+  draggingDocumentId=null;
+});
+document.addEventListener("dragend",e=>{
+  const row=e.target.closest("[data-doc-row]");
+  if(row)row.classList.remove("is-dragging");
+  document.querySelectorAll("[data-doc-row].drag-over").forEach(x=>x.classList.remove("drag-over"));
+  draggingDocumentId=null;
+});
 
 async function deleteDocument(id){
  const d=data.documents.find(x=>x.id===id);if(!d)return;
@@ -350,7 +427,7 @@ document.addEventListener("submit",async e=>{
      state.view="documents";
    }
    if(type==="document-edit"){
-     const id=window.__editDocumentId;const {error}=await supabase.from("documents").update({title:fd.get("name"),category:fd.get("category"),updated_at:new Date().toISOString()}).eq("id",id);
+     const id=window.__editDocumentId;const {error}=await supabase.from("documents").update({title:fd.get("name"),category:fd.get("category")}).eq("id",id);
      if(error)throw error;window.__editDocumentId=null;state.view="documents";
    }
    if(type==="request"){
