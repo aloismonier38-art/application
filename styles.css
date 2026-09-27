@@ -707,3 +707,17 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
     width:min(500px,100%)!important;
   }
 }
+
+
+/* PIZZA COSY — paramètres accessibles depuis le profil */
+.user-card[data-view="settings"]{
+  cursor:pointer;
+  transition:background .15s ease,transform .15s ease;
+}
+.user-card[data-view="settings"]:hover{
+  background:rgba(255,255,255,.08);
+}
+.user-card[data-view="settings"]:focus-visible{
+  outline:2px solid #E38F9C;
+  outline-offset:2px;
+}
