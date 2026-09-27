@@ -453,7 +453,9 @@ async function openModal(type){
 
 document.addEventListener("click",async e=>{
  const close=e.target.closest("[data-close]");if(close){closeModal();return;}
- const nav=e.target.closest("[data-view]");if(nav){state.view=nav.dataset.view;render();return;}
+ const nav=e.target.closest("[data-view]");if(nav){state.view=nav.dataset.view;document.body.classList.remove("mobile-nav-open");const mm=document.querySelector("[data-mobile-menu]");if(mm)mm.setAttribute("aria-expanded","false");render();return;}
+ const mobileMenu=e.target.closest("[data-mobile-menu]");if(mobileMenu){const open=!document.body.classList.contains("mobile-nav-open");document.body.classList.toggle("mobile-nav-open",open);mobileMenu.setAttribute("aria-expanded",String(open));return;}
+ const mobileClose=e.target.closest("[data-mobile-menu-close]");if(mobileClose){document.body.classList.remove("mobile-nav-open");const mm=document.querySelector("[data-mobile-menu]");if(mm)mm.setAttribute("aria-expanded","false");return;}
  const userAdd=e.target.closest("[data-user-add]");if(userAdd){openUserModal(null);return;}
  const userEdit=e.target.closest("[data-user-edit]");if(userEdit){openUserModal(data.users.find(u=>u.id===userEdit.dataset.userEdit));return;}
  const resetUser=e.target.closest("[data-reset-user]");if(resetUser){const u=data.users.find(x=>x.id===resetUser.dataset.resetUser);if(u?.login_email){const {error}=await supabase.auth.resetPasswordForEmail(u.login_email,{redirectTo:window.location.origin+window.location.pathname});alert(error?error.message:"Lien de réinitialisation envoyé.");}return;}
