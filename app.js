@@ -172,9 +172,16 @@ function establishmentLabel(){
 function setEstablishmentContext(id){
   state.selectedEstablishmentId=id||"";
   localStorage.setItem("cosy-establishment-id",state.selectedEstablishmentId);
-  document.querySelectorAll("[data-establishment-menu]").forEach(x=>x.hidden=true);
+  const menu=$("#establishmentMenu");
+  const current=$("#establishmentCurrent");
+  if(menu)menu.hidden=true;
+  if(current)current.setAttribute("aria-expanded","false");
   renderEstablishmentSwitcher();
   render();
+}
+function visibleUsersForSelectedEstablishment(){
+  if(!state.selectedEstablishmentId)return data.users;
+  return data.users.filter(u=>userEstablishmentIds(u.id).includes(state.selectedEstablishmentId));
 }
 function renderEstablishmentSwitcher(){
   const current=$("#establishmentCurrent");
@@ -203,9 +210,10 @@ function taskCard(t){
 }
 
 function renderDashboard(){
+ const visibleUsers=visibleUsersForSelectedEstablishment();
  content.innerHTML='<div class="grid">'+
  '<div class="card"><div class="stat-label">Fiches techniques</div><div class="stat-value">'+data.documents.length+'</div><div class="stat-note">Documents disponibles</div></div>'+
- '<div class="card"><div class="stat-label">Membres</div><div class="stat-value">'+data.users.length+'</div><div class="stat-note">Comptes gérés</div></div></div>'+
+ '<div class="card"><div class="stat-label">Membres</div><div class="stat-value">'+visibleUsers.length+'</div><div class="stat-note">'+(state.selectedEstablishmentId?"Membres autorisés":"Comptes gérés")+'</div></div></div>'+
  '<div class="section-title"><h2>Bienvenue sur PIZZA COSY</h2></div>'+
  '<div class="empty">Votre espace équipe est prêt. Retrouvez ici vos fiches techniques et, selon vos droits, la gestion des accès.</div>';
 }
@@ -233,13 +241,15 @@ function renderRequests(){
 }
 function renderAccess(){
   if(state.role!=="admin"){content.innerHTML='<div class="empty">Cette rubrique est réservée aux administrateurs.</div>';return;}
-  content.innerHTML='<div class="section-title"><div><h2>Accès</h2><div class="muted">Gérez les comptes et les magasins autorisés.</div></div><button class="btn" data-user-add>+ Ajouter un accès</button></div>'+
-  '<div class="list access-list">'+(data.users.length?data.users.map(u=>{
+  const users=visibleUsersForSelectedEstablishment();
+  const filterLabel=establishmentLabel();
+  content.innerHTML='<div class="section-title"><div><h2>Accès</h2><div class="muted">Membres autorisés — '+esc(filterLabel)+'</div></div><button class="btn" data-user-add>+ Ajouter un accès</button></div>'+
+  '<div class="list access-list">'+(users.length?users.map(u=>{
     const ids=userEstablishmentIds(u.id);
     const stores=ids.map(id=>establishmentById(id)?.name).filter(Boolean);
     const storeLabel=stores.length===data.establishments.length&&data.establishments.length>1?"Tous les restaurants":(stores.join(" · ")||"Aucun magasin");
     return '<div class="row access-row"><div class="access-person"><div class="settings-avatar">'+esc(initialsForName(u.full_name))+'</div><div><strong>'+esc(displayPersonName(u.full_name)||"Sans nom")+'</strong><div class="muted">'+esc(u.phone||"Téléphone non renseigné")+' · '+esc(u.login_email||"E-mail non renseigné")+'</div><div class="access-stores">'+esc(storeLabel)+'</div></div></div><div class="access-meta"><span class="tag">'+esc(roleText(u.role))+'</span><span class="access-status '+(u.is_active!==false?"active":"inactive")+'">'+(u.is_active!==false?"Actif":"Désactivé")+'</span><button class="btn-secondary" type="button" data-user-edit="'+esc(u.id)+'">Modifier</button></div></div>';
-  }).join(""):'<div class="empty">Aucun compte utilisateur.</div>')+'</div>';
+  }).join(""):'<div class="empty">Aucun membre autorisé dans ce restaurant.</div>')+'</div>';
 }
 
 function openUserModal(user){
