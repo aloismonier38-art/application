@@ -144,7 +144,7 @@ async function loadEstablishments(){
 async function loadUsers(){
   if(state.role!=="admin"){data.users=[];data.userEstablishmentAccess=[];return;}
   const [{data:users,error:userError},{data:access,error:accessError}]=await Promise.all([
-    supabase.from("profiles").select("id,full_name,role,phone,login_email,is_active").order("full_name",{ascending:true}),
+    supabase.from("profiles").select("id,full_name,role,phone,login_email,is_active,must_set_password").order("full_name",{ascending:true}),
     supabase.rpc("admin_get_user_establishments")
   ]);
   if(userError)throw userError;
@@ -271,7 +271,7 @@ function openUserModal(user){
         '<div class="user-access-state"><span><strong>Compte actif</strong><small>Autorise la connexion à l’espace équipe.</small></span><label class="switch"><input name="is_active" type="checkbox" '+(u.is_active!==false?"checked":"")+'><span class="switch-track"></span></label></div>'+
       '</div>'+
       '<div class="establishment-access-box"><div><strong>Magasins autorisés</strong><small>La personne ne verra que les établissements cochés dans son sélecteur.</small></div><div class="establishment-check-grid">'+establishmentFields+'</div></div>'+
-      (editing?'<div class="user-modal-security"><div><strong>Sécurité du compte</strong><small>Le mot de passe peut être réinitialisé par e-mail.</small></div><div class="user-modal-security-actions"><button type="button" class="btn-link" data-reset-user="'+esc(u.id)+'">Réinitialiser le mot de passe</button><button type="button" class="btn-danger" data-delete-user="'+esc(u.id)+'">Supprimer définitivement</button></div></div>':"")+
+      (editing?'<div class="user-modal-security"><div><strong>Sécurité du compte</strong><small>Le mot de passe peut être réinitialisé par e-mail.</small></div><div class="user-modal-security-actions">'+(u.must_set_password?'<button type="button" class="btn-link" data-resend-invitation="'+esc(u.id)+'">Renvoyer l’invitation</button>':"")+'<button type="button" class="btn-link" data-reset-user="'+esc(u.id)+'">Réinitialiser le mot de passe</button><button type="button" class="btn-danger" data-delete-user="'+esc(u.id)+'">Supprimer définitivement</button></div></div>':"")+
       '<div class="user-modal-footer"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn" type="submit">Enregistrer</button></div><p id="userAccessMessage" class="user-modal-message"></p>'+
     '</form></div></div>');
   $("#userAccessForm")?.addEventListener("submit",async e=>{
@@ -507,6 +507,7 @@ document.addEventListener("click",async e=>{
  const mobileClose=e.target.closest("[data-mobile-menu-close]");if(mobileClose){document.body.classList.remove("mobile-nav-open");const mm=document.querySelector("[data-mobile-menu]");if(mm)mm.setAttribute("aria-expanded","false");return;}
  const userAdd=e.target.closest("[data-user-add]");if(userAdd){openUserModal(null);return;}
  const userEdit=e.target.closest("[data-user-edit]");if(userEdit){openUserModal(data.users.find(u=>u.id===userEdit.dataset.userEdit));return;}
+ const resendInvitation=e.target.closest("[data-resend-invitation]");if(resendInvitation){const u=data.users.find(x=>x.id===resendInvitation.dataset.resendInvitation);if(!u)return;if(!confirm("Renvoyer l’invitation à "+(u.login_email||"cet utilisateur")+" ?"))return;resendInvitation.disabled=true;try{const {data:result,error}=await supabase.functions.invoke("resend-invitation",{body:{user_id:u.id}});if(error)throw error;if(result?.error)throw new Error(result.error);alert("Invitation renvoyée.");}catch(err){alert(err?.message||"Impossible de renvoyer l’invitation.");}finally{resendInvitation.disabled=false;}return;}
  const resetUser=e.target.closest("[data-reset-user]");if(resetUser){const u=data.users.find(x=>x.id===resetUser.dataset.resetUser);if(u?.login_email){const {error}=await supabase.auth.resetPasswordForEmail(u.login_email,{redirectTo:window.location.origin+window.location.pathname});alert(error?error.message:"Lien de réinitialisation envoyé.");}return;}
  const deleteUser=e.target.closest("[data-delete-user]");if(deleteUser){
    const u=data.users.find(x=>x.id===deleteUser.dataset.deleteUser);
