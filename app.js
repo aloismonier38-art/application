@@ -280,6 +280,10 @@ function openUserModal(user){
         const {data:result,error}=await supabase.functions.invoke("invite-user",{body:{full_name:fields.full_name,phone:fields.phone,login_email:fields.login_email,role:fields.role,establishment_ids:establishmentIds}});
         if(error)throw error;
         if(result?.error)throw new Error(result.error);
+        const invitedUserId=result?.user_id;
+        if(!invitedUserId)throw new Error("L'utilisateur a été créé mais son identifiant est introuvable.");
+        const {error:accessError}=await supabase.rpc("admin_set_user_establishments",{p_user_id:invitedUserId,p_establishment_ids:establishmentIds});
+        if(accessError)throw accessError;
         await loadData();render();closeModal();
         alert("Invitation envoyée à "+fields.login_email+".");
         return;
