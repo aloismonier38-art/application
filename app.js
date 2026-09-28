@@ -180,7 +180,7 @@ function renderEstablishmentSwitcher(){
   const current=$("#establishmentCurrent");
   const menu=$("#establishmentMenu");
   if(!current||!menu)return;
-  current.innerHTML='<strong>PIZZA COSY</strong><small>'+esc(establishmentLabel())+'</small><span class="establishment-chevron">⌄</span>';
+  current.innerHTML='<strong>PIZZA COSY</strong><small>Espace d\'équipe · '+esc(establishmentLabel())+'</small><span class="establishment-chevron">⌄</span>';
   current.setAttribute("aria-expanded","false");
   const groups={};
   data.establishments.forEach(e=>(groups[e.group_name||"Restaurants"]??=[]).push(e));
