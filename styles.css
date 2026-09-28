@@ -879,3 +879,51 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
     margin-top:5px!important;
   }
 }
+
+
+/* PIZZA COSY — sélecteur d'établissement type Zelty */
+.establishment-switcher{position:relative;margin:0 0 14px}
+.establishment-current{
+  width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;
+  gap:1px 8px;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:12px;
+  background:rgba(255,255,255,.07);color:#fff;padding:12px 13px;cursor:pointer;
+}
+.establishment-current:hover{background:rgba(255,255,255,.11)}
+.establishment-current strong{font-size:14px;line-height:1.2}
+.establishment-current small{font-size:11px;color:#c6d2cb;line-height:1.25}
+.establishment-chevron{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:17px;color:#dce7e1}
+.establishment-menu{
+  position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:500;
+  max-height:min(560px,calc(100vh - 190px));overflow:auto;background:#fff;color:var(--green);
+  border:1px solid var(--line);border-radius:10px;box-shadow:0 18px 40px rgba(0,0,0,.2);padding:6px;
+}
+.establishment-menu[hidden]{display:none}
+.establishment-group{padding:10px 10px 6px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8a928d}
+.establishment-option{
+  width:100%;display:flex;align-items:center;gap:9px;border:0;background:transparent;color:var(--green);
+  text-align:left;padding:10px;border-radius:7px;cursor:pointer;font:inherit;font-size:13px;
+}
+.establishment-option:hover,.establishment-option.active{background:#f8f6f2}
+.establishment-option.active{color:#5b9bd5}
+.establishment-option>span{width:14px;flex:0 0 14px;text-align:center}
+.establishment-option strong{font-weight:650}
+.access-stores{margin-top:5px;font-size:11px;font-weight:650;color:var(--green)}
+.establishment-access-box{
+  margin-top:18px;padding:15px;background:#faf9f6;border:1px solid var(--line);border-radius:11px;
+}
+.establishment-access-box>div:first-child{display:grid;gap:3px;margin-bottom:11px}
+.establishment-access-box strong{font-size:12px}
+.establishment-access-box small{font-size:10px;color:var(--muted)}
+.establishment-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.establishment-check{
+  display:flex!important;flex-direction:row;align-items:center;gap:9px;padding:10px;border:1px solid var(--line);
+  border-radius:9px;background:#fff;cursor:pointer;
+}
+.establishment-check input{width:16px!important;height:16px;flex:0 0 16px;accent-color:var(--green)}
+.establishment-check span{display:grid;gap:1px;min-width:0}
+.establishment-check span strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.establishment-check span small{font-size:9px;color:var(--muted)}
+@media(max-width:700px){
+  .establishment-check-grid{grid-template-columns:1fr}
+  .establishment-menu{max-height:calc(100dvh - 220px)}
+}
