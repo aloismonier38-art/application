@@ -37,9 +37,11 @@ Deno.serve(async (req) => {
     const phone = String(body.phone || "").trim();
     const login_email = String(body.login_email || "").trim().toLowerCase();
     const role = String(body.role || "employee");
+    const establishment_ids = Array.isArray(body.establishment_ids) ? body.establishment_ids.map((x) => String(x).trim()).filter(Boolean) : [];
 
     if (!full_name || !login_email) throw new Error("Nom et e-mail obligatoires.");
     if (!["employee", "manager", "admin"].includes(role)) throw new Error("Profil d’accès invalide.");
+    if (!establishment_ids.length) throw new Error("Sélectionnez au moins un magasin.");
 
     const { data: invitation, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(login_email, {
@@ -51,6 +53,29 @@ Deno.serve(async (req) => {
       full_name, phone, login_email, role, is_active: true, must_set_password: true,
     }).eq("id", invitation.user.id);
     if (updateError) throw updateError;
+
+    const { data: establishments, error: establishmentsError } = await adminClient
+      .from("establishments")
+      .select("id")
+      .in("id", establishment_ids)
+      .eq("is_active", true);
+    if (establishmentsError) throw establishmentsError;
+    if (!establishments || establishments.length !== establishment_ids.length) {
+      throw new Error("Un des magasins sélectionnés est invalide.");
+    }
+
+    const { error: accessError } = await adminClient
+      .from("user_establishments")
+      .insert(establishment_ids.map((establishment_id) => ({
+        user_id: invitation.user.id,
+        establishment_id,
+      })));
+    if (accessError) throw accessError;
+
+    const { error: legacyError } = await adminClient.from("profiles").update({
+      establishment_id: establishment_ids[0],
+    }).eq("id", invitation.user.id);
+    if (legacyError) throw legacyError;
 
     return new Response(JSON.stringify({ ok: true, user_id: invitation.user.id }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
