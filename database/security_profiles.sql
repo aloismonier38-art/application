@@ -282,3 +282,218 @@ $$;
 
 revoke execute on function public.get_my_profile() from public, anon;
 grant execute on function public.get_my_profile() to authenticated;
+
+
+-- ============================================================
+-- PIZZA COSY — ACCÈS À PLUSIEURS ÉTABLISSEMENTS
+-- ============================================================
+
+alter table public.establishments
+  add column if not exists group_name text not null default 'Franchises',
+  add column if not exists is_active boolean not null default true;
+
+create table if not exists public.user_establishments (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  establishment_id uuid not null references public.establishments(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, establishment_id)
+);
+
+create index if not exists user_establishments_user_idx
+  on public.user_establishments(user_id);
+
+create index if not exists user_establishments_establishment_idx
+  on public.user_establishments(establishment_id);
+
+insert into public.establishments(name, code, group_name, is_active)
+values
+  ('Bourgoin-Jallieu','BOURGOIN','Franchises',true),
+  ('Bron','BRON','Franchises',true),
+  ('Caluire-et-Cuire','CALUIRE','Franchises',true),
+  ('Grenoble Gare','GRENOBLE-GARE','Franchises',true),
+  ('Lyon 6','LYON-6','Franchises',true),
+  ('Villeurbanne','VILLEURBANNE','Franchises',true),
+  ('Voiron','VOIRON','Franchises',true)
+on conflict (code) do update
+set name=excluded.name,
+    group_name=excluded.group_name,
+    is_active=true;
+
+insert into public.user_establishments(user_id, establishment_id)
+select p.id, p.establishment_id
+from public.profiles p
+where p.establishment_id is not null
+on conflict do nothing;
+
+insert into public.user_establishments(user_id, establishment_id)
+select p.id, e.id
+from public.profiles p
+cross join public.establishments e
+where p.role = 'admin'::public.user_role
+  and e.is_active = true
+on conflict do nothing;
+
+alter table public.user_establishments enable row level security;
+
+drop policy if exists user_establishments_select on public.user_establishments;
+create policy user_establishments_select
+on public.user_establishments
+for select to authenticated
+using (
+  user_id = auth.uid()
+  or public.is_admin()
+);
+
+drop policy if exists user_establishments_insert on public.user_establishments;
+create policy user_establishments_insert
+on public.user_establishments
+for insert to authenticated
+with check (public.is_admin());
+
+drop policy if exists user_establishments_delete on public.user_establishments;
+create policy user_establishments_delete
+on public.user_establishments
+for delete to authenticated
+using (public.is_admin());
+
+grant select on public.user_establishments to authenticated;
+grant insert, delete on public.user_establishments to authenticated;
+grant select on public.establishments to authenticated;
+
+drop policy if exists establishments_select_authenticated on public.establishments;
+create policy establishments_select_authenticated
+on public.establishments
+for select to authenticated
+using (
+  is_active = true
+  and (
+    public.is_admin()
+    or exists (
+      select 1
+      from public.user_establishments ue
+      where ue.user_id = auth.uid()
+        and ue.establishment_id = establishments.id
+    )
+  )
+);
+
+create or replace function public.get_my_establishments()
+returns table (
+  id uuid,
+  name text,
+  code text,
+  group_name text
+)
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select e.id, e.name, e.code, e.group_name
+  from public.establishments e
+  join public.user_establishments ue
+    on ue.establishment_id = e.id
+  where ue.user_id = auth.uid()
+    and e.is_active = true
+  order by e.group_name, e.name;
+$$;
+
+revoke execute on function public.get_my_establishments() from public, anon;
+grant execute on function public.get_my_establishments() to authenticated;
+
+create or replace function public.admin_get_user_establishments()
+returns table (
+  user_id uuid,
+  establishment_id uuid
+)
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select ue.user_id, ue.establishment_id
+  from public.user_establishments ue
+  where exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'admin'::public.user_role
+      and p.is_active = true
+  );
+$$;
+
+revoke execute on function public.admin_get_user_establishments() from public, anon;
+grant execute on function public.admin_get_user_establishments() to authenticated;
+
+create or replace function public.admin_set_user_establishments(
+  p_user_id uuid,
+  p_establishment_ids uuid[]
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_exists boolean;
+begin
+  if not exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'admin'::public.user_role
+      and p.is_active = true
+  ) then
+    raise exception 'Accès réservé aux administrateurs.';
+  end if;
+
+  if p_user_id is null then
+    raise exception 'Utilisateur invalide.';
+  end if;
+
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = p_user_id
+  ) into target_exists;
+
+  if not target_exists then
+    raise exception 'Utilisateur introuvable.';
+  end if;
+
+  if coalesce(array_length(p_establishment_ids, 1), 0) = 0 then
+    raise exception 'Sélectionnez au moins un magasin.';
+  end if;
+
+  if exists (
+    select 1
+    from unnest(p_establishment_ids) x
+    where not exists (
+      select 1
+      from public.establishments e
+      where e.id = x
+        and e.is_active = true
+    )
+  ) then
+    raise exception 'Un des magasins sélectionnés est invalide.';
+  end if;
+
+  delete from public.user_establishments
+  where user_id = p_user_id;
+
+  insert into public.user_establishments(user_id, establishment_id)
+  select p_user_id, x
+  from unnest(p_establishment_ids) x
+  on conflict do nothing;
+
+  update public.profiles
+  set establishment_id = p_establishment_ids[1],
+      updated_at = now()
+  where id = p_user_id;
+
+  return true;
+end;
+$$;
+
+revoke execute on function public.admin_set_user_establishments(uuid,uuid[]) from public, anon;
+grant execute on function public.admin_set_user_establishments(uuid,uuid[]) to authenticated;
