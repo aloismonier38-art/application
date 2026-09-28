@@ -21,8 +21,8 @@ if(!window.TEAMHUB_SUPABASE_URL || !window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY){
 supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 
 const APP_VERSION="1.1.104";
-const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
-const data={tasks:[],documents:[],requests:[],reports:[],users:[]};
+const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null,selectedEstablishmentId:localStorage.getItem("cosy-establishment-id")||""};
+const data={tasks:[],documents:[],requests:[],reports:[],users:[],establishments:[],userEstablishmentAccess:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
@@ -126,22 +126,73 @@ async function loadProfile(){
   const {data:{user},error:userError}=await supabase.auth.getUser();
   if(userError)throw userError;
   if(!user)throw new Error("Session utilisateur introuvable.");
-  const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",user.id).single();
+  const {data:profile,error}=await supabase.rpc("get_my_profile");
   if(error)throw error;
+  if(!profile)throw new Error("Profil utilisateur introuvable.");
   state.profile={...profile,email:user.email||""};
   state.role=profile.role;
 }
-async function loadUsers(){
-  if(state.role!=="admin"){data.users=[];return;}
-  const {data:users,error}=await supabase.from("profiles").select("id,full_name,role,phone,login_email,is_active").order("full_name",{ascending:true});
+async function loadEstablishments(){
+  const {data:establishments,error}=await supabase.rpc("get_my_establishments");
   if(error)throw error;
+  data.establishments=establishments||[];
+  if(!data.establishments.some(e=>e.id===state.selectedEstablishmentId)){
+    state.selectedEstablishmentId=data.establishments.length===1?data.establishments[0].id:"";
+    localStorage.setItem("cosy-establishment-id",state.selectedEstablishmentId);
+  }
+}
+async function loadUsers(){
+  if(state.role!=="admin"){data.users=[];data.userEstablishmentAccess=[];return;}
+  const [{data:users,error:userError},{data:access,error:accessError}]=await Promise.all([
+    supabase.from("profiles").select("id,full_name,role,phone,login_email,is_active").order("full_name",{ascending:true}),
+    supabase.rpc("admin_get_user_establishments")
+  ]);
+  if(userError)throw userError;
+  if(accessError)throw accessError;
   data.users=users||[];
+  data.userEstablishmentAccess=access||[];
 }
 async function loadData(){
+  await loadEstablishments();
   const {data:documents,error}=await supabase.from("documents").select("*").order("updated_at",{ascending:false});
   if(error)throw error;
   data.documents=documents||[];
   await loadUsers();
+}
+function establishmentById(id){return data.establishments.find(e=>e.id===id)||null;}
+function selectedEstablishment(){return establishmentById(state.selectedEstablishmentId);}
+function userEstablishmentIds(userId){
+  return data.userEstablishmentAccess.filter(x=>x.user_id===userId).map(x=>x.establishment_id);
+}
+function establishmentLabel(){
+  const selected=selectedEstablishment();
+  if(selected)return selected.name;
+  return data.establishments.length>1?"Tous les restaurants":(data.establishments[0]?.name||"Aucun magasin");
+}
+function setEstablishmentContext(id){
+  state.selectedEstablishmentId=id||"";
+  localStorage.setItem("cosy-establishment-id",state.selectedEstablishmentId);
+  document.querySelectorAll("[data-establishment-menu]").forEach(x=>x.hidden=true);
+  renderEstablishmentSwitcher();
+  render();
+}
+function renderEstablishmentSwitcher(){
+  const current=$("#establishmentCurrent");
+  const menu=$("#establishmentMenu");
+  if(!current||!menu)return;
+  current.innerHTML='<strong>PIZZA COSY</strong><small>'+esc(establishmentLabel())+'</small><span class="establishment-chevron">⌄</span>';
+  current.setAttribute("aria-expanded","false");
+  const groups={};
+  data.establishments.forEach(e=>(groups[e.group_name||"Restaurants"]??=[]).push(e));
+  let html="";
+  if(data.establishments.length>1){
+    html+='<button type="button" class="establishment-option '+(!state.selectedEstablishmentId?"active":"")+'" data-establishment-select=""><span>✓</span><strong>Tous les restaurants</strong></button>';
+  }
+  Object.keys(groups).forEach(group=>{
+    html+='<div class="establishment-group">'+esc(group)+'</div>';
+    html+=groups[group].map(e=>'<button type="button" class="establishment-option '+(state.selectedEstablishmentId===e.id?"active":"")+'" data-establishment-select="'+esc(e.id)+'"><span>'+(state.selectedEstablishmentId===e.id?"✓":"")+'</span>'+esc(e.name)+'</button>').join("");
+  });
+  menu.innerHTML=html;
 }
 function taskCard(t){
   const l=late(t.due);
@@ -182,17 +233,25 @@ function renderRequests(){
 }
 function renderAccess(){
   if(state.role!=="admin"){content.innerHTML='<div class="empty">Cette rubrique est réservée aux administrateurs.</div>';return;}
-  content.innerHTML='<div class="section-title"><div><h2>Accès</h2><div class="muted">Gérez les comptes et leurs profils d’accès.</div></div><button class="btn" data-user-add>+ Ajouter un accès</button></div>'+
-  '<div class="list access-list">'+(data.users.length?data.users.map(u=>'<div class="row access-row"><div class="access-person"><div class="settings-avatar">'+esc(initialsForName(u.full_name))+'</div><div><strong>'+esc(displayPersonName(u.full_name)||"Sans nom")+'</strong><div class="muted">'+esc(u.phone||"Téléphone non renseigné")+' · '+esc(u.login_email||"E-mail non renseigné")+'</div></div></div><div class="access-meta"><span class="tag">'+esc(roleText(u.role))+'</span><span class="access-status '+(u.is_active!==false?"active":"inactive")+'">'+(u.is_active!==false?"Actif":"Désactivé")+'</span><button class="btn-secondary" type="button" data-user-edit="'+esc(u.id)+'">Modifier</button></div></div>').join(""):'<div class="empty">Aucun compte utilisateur.</div>')+'</div>';
+  content.innerHTML='<div class="section-title"><div><h2>Accès</h2><div class="muted">Gérez les comptes et les magasins autorisés.</div></div><button class="btn" data-user-add>+ Ajouter un accès</button></div>'+
+  '<div class="list access-list">'+(data.users.length?data.users.map(u=>{
+    const ids=userEstablishmentIds(u.id);
+    const stores=ids.map(id=>establishmentById(id)?.name).filter(Boolean);
+    const storeLabel=stores.length===data.establishments.length&&data.establishments.length>1?"Tous les restaurants":(stores.join(" · ")||"Aucun magasin");
+    return '<div class="row access-row"><div class="access-person"><div class="settings-avatar">'+esc(initialsForName(u.full_name))+'</div><div><strong>'+esc(displayPersonName(u.full_name)||"Sans nom")+'</strong><div class="muted">'+esc(u.phone||"Téléphone non renseigné")+' · '+esc(u.login_email||"E-mail non renseigné")+'</div><div class="access-stores">'+esc(storeLabel)+'</div></div></div><div class="access-meta"><span class="tag">'+esc(roleText(u.role))+'</span><span class="access-status '+(u.is_active!==false?"active":"inactive")+'">'+(u.is_active!==false?"Actif":"Désactivé")+'</span><button class="btn-secondary" type="button" data-user-edit="'+esc(u.id)+'">Modifier</button></div></div>';
+  }).join(""):'<div class="empty">Aucun compte utilisateur.</div>')+'</div>';
 }
 
 function openUserModal(user){
   closeModal();
   const u=user||{id:"",full_name:"",phone:"",login_email:"",role:"employee",is_active:true};
   const editing=!!user;
-  const person=splitPersonName(u.full_name); const initials=initialsForName(u.full_name);
+  const person=splitPersonName(u.full_name);
+  const initials=initialsForName(u.full_name);
+  const assignedIds=new Set(editing?userEstablishmentIds(u.id):(state.selectedEstablishmentId?[state.selectedEstablishmentId]:(data.establishments[0]?.id?[data.establishments[0].id]:[])));
+  const establishmentFields=data.establishments.map(e=>'<label class="establishment-check"><input type="checkbox" name="establishments" value="'+esc(e.id)+'" '+(assignedIds.has(e.id)?"checked":"")+'><span><strong>'+esc(e.name)+'</strong><small>'+esc(e.code||"")+'</small></span></label>').join("");
   document.body.insertAdjacentHTML("beforeend",'<div id="appModal" class="modal-backdrop user-modal-backdrop"><div class="user-modal-card">'+
-    '<div class="user-modal-head"><div class="user-modal-identity"><div class="user-modal-avatar">'+esc(initials)+'</div><div><span class="user-modal-kicker">ACCÈS ÉQUIPE</span><h3>'+(editing?"Modifier le compte":"Ajouter un accès")+'</h3><p>'+(editing?"Modifiez les informations et les droits de cet utilisateur.":"Créez un nouvel accès à l’espace équipe.")+'</p></div></div><button class="modal-close" data-close aria-label="Fermer">×</button></div>'+
+    '<div class="user-modal-head"><div class="user-modal-identity"><div class="user-modal-avatar">'+esc(initials)+'</div><div><span class="user-modal-kicker">ACCÈS ÉQUIPE</span><h3>'+(editing?"Modifier le compte":"Ajouter un accès")+'</h3><p>'+(editing?"Modifiez les informations, le rôle et les magasins autorisés.":"Créez un accès et choisissez les magasins autorisés.")+'</p></div></div><button class="modal-close" data-close aria-label="Fermer">×</button></div>'+
     '<form id="userAccessForm" class="user-modal-form">'+
       '<div class="user-form-grid">'+
         '<label>Prénom<input name="first_name" required value="'+esc(person.firstName)+'" placeholder="Ex. Jean"></label><label>Nom<input name="last_name" required value="'+esc(person.lastName)+'" placeholder="Ex. DUPONT"></label>'+
@@ -201,18 +260,24 @@ function openUserModal(user){
         '<label>Profil d’accès<select name="role"><option value="employee" '+(u.role==="employee"?"selected":"")+'>Salarié</option><option value="manager" '+(u.role==="manager"?"selected":"")+'>Manager</option><option value="admin" '+(u.role==="admin"?"selected":"")+'>Administrateur</option></select></label>'+
         '<div class="user-access-state"><span><strong>Compte actif</strong><small>Autorise la connexion à l’espace équipe.</small></span><label class="switch"><input name="is_active" type="checkbox" '+(u.is_active!==false?"checked":"")+'><span class="switch-track"></span></label></div>'+
       '</div>'+
+      '<div class="establishment-access-box"><div><strong>Magasins autorisés</strong><small>La personne ne verra que les établissements cochés dans son sélecteur.</small></div><div class="establishment-check-grid">'+establishmentFields+'</div></div>'+
       (editing?'<div class="user-modal-security"><div><strong>Sécurité du compte</strong><small>Le mot de passe peut être réinitialisé par e-mail.</small></div><div class="user-modal-security-actions"><button type="button" class="btn-link" data-reset-user="'+esc(u.id)+'">Réinitialiser le mot de passe</button><button type="button" class="btn-danger" data-delete-user="'+esc(u.id)+'">Supprimer définitivement</button></div></div>':"")+
       '<div class="user-modal-footer"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn" type="submit">Enregistrer</button></div><p id="userAccessMessage" class="user-modal-message"></p>'+
     '</form></div></div>');
   $("#userAccessForm")?.addEventListener("submit",async e=>{
     e.preventDefault();
     const fd=new FormData(e.target);
-    const fields={full_name:formatPersonName(String(fd.get("first_name")||"").trim(),String(fd.get("last_name")||"").trim()),phone:String(fd.get("phone")||"").trim(),login_email:String(fd.get("login_email")||"").trim(),role:String(fd.get("role")||"employee"),is_active:fd.get("is_active")==="on"};
+    const establishmentIds=[...e.target.querySelectorAll('input[name="establishments"]:checked')].map(x=>x.value);
+    const firstName=String(fd.get("first_name")||"").trim();
+    const lastName=String(fd.get("last_name")||"").trim();
+    const fields={full_name:formatPersonName(firstName,lastName),phone:String(fd.get("phone")||"").trim(),login_email:String(fd.get("login_email")||"").trim(),role:String(fd.get("role")||"employee"),is_active:fd.get("is_active")==="on"};
     const msg=$("#userAccessMessage");
+    if(!firstName||!lastName){msg.textContent="Prénom et nom sont obligatoires.";return;}
+    if(!establishmentIds.length){msg.textContent="Sélectionnez au moins un magasin.";return;}
     try{
       if(!editing){
         msg.textContent="Création de l’invitation…";
-        const {data:result,error}=await supabase.functions.invoke("invite-user",{body:{full_name:fields.full_name,phone:fields.phone,login_email:fields.login_email,role:fields.role}});
+        const {data:result,error}=await supabase.functions.invoke("invite-user",{body:{full_name:fields.full_name,phone:fields.phone,login_email:fields.login_email,role:fields.role,establishment_ids:establishmentIds}});
         if(error)throw error;
         if(result?.error)throw new Error(result.error);
         await loadData();render();closeModal();
@@ -221,6 +286,8 @@ function openUserModal(user){
       }
       const {error}=await supabase.rpc("admin_update_profile",{p_user_id:u.id,p_full_name:fields.full_name,p_phone:fields.phone,p_role:fields.role,p_is_active:fields.is_active});
       if(error)throw error;
+      const {error:accessError}=await supabase.rpc("admin_set_user_establishments",{p_user_id:u.id,p_establishment_ids:establishmentIds});
+      if(accessError)throw accessError;
       await loadData();render();closeModal();
     }catch(err){if(msg)msg.textContent=err.message||"Impossible d’enregistrer.";}
   });
@@ -420,6 +487,8 @@ async function openModal(type){
 document.addEventListener("click",async e=>{
  const close=e.target.closest("[data-close]");if(close){closeModal();return;}
  const nav=e.target.closest("[data-view]");if(nav){state.view=nav.dataset.view;document.body.classList.remove("mobile-nav-open");const mm=document.querySelector("[data-mobile-menu]");if(mm)mm.setAttribute("aria-expanded","false");render();return;}
+ const establishmentCurrent=e.target.closest("[data-establishment-menu]");if(establishmentCurrent){const menu=$("#establishmentMenu");if(menu){const opening=menu.hidden;menu.hidden=!opening;establishmentCurrent.setAttribute("aria-expanded",String(opening));}return;}
+ const establishmentSelect=e.target.closest("[data-establishment-select]");if(establishmentSelect){setEstablishmentContext(establishmentSelect.dataset.establishmentSelect||"");return;}
  const mobileMenu=e.target.closest("[data-mobile-menu]");if(mobileMenu){const open=!document.body.classList.contains("mobile-nav-open");document.body.classList.toggle("mobile-nav-open",open);mobileMenu.setAttribute("aria-expanded",String(open));return;}
  const mobileClose=e.target.closest("[data-mobile-menu-close]");if(mobileClose){document.body.classList.remove("mobile-nav-open");const mm=document.querySelector("[data-mobile-menu]");if(mm)mm.setAttribute("aria-expanded","false");return;}
  const userAdd=e.target.closest("[data-user-add]");if(userAdd){openUserModal(null);return;}
@@ -581,6 +650,7 @@ async function boot(){
         loadData(),
         new Promise((_,reject)=>setTimeout(()=>reject(new Error("Le chargement des données prend trop de temps.")),8000))
       ]);
+      renderEstablishmentSwitcher();
       render();
     }catch(dataError){
       console.error("PIZZA COSY data loading error:",dataError);
