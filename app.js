@@ -23,7 +23,7 @@ supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB
 const APP_VERSION="1.1.124";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null,selectedEstablishmentId:localStorage.getItem("cosy-establishment-id")||""};
 const data={tasks:[],documents:[],requests:[],reports:[],users:[],establishments:[],userEstablishmentAccess:[],performance:[],monthlyPerformance:[]};
-const performanceState={mode:"month",monthStart:new Date(new Date().getFullYear(),new Date().getMonth(),1),selectedDates:[],establishmentId:localStorage.getItem("cosy-establishment-id")||""};
+const performanceState={mode:"month",monthStart:new Date(new Date().getFullYear(),new Date().getMonth(),1),selectedDates:[],rangeStart:null,establishmentId:localStorage.getItem("cosy-establishment-id")||""};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
@@ -259,11 +259,22 @@ async function changePerformanceMonth(delta){
   if(performanceState.mode==="days")performanceState.selectedDates=[];
   await loadPerformance(); renderDashboard();
 }
+function datesBetweenInclusive(startIso,endIso){
+  const start=parseIsoDate(startIso), end=parseIsoDate(endIso);
+  const a=start<=end?start:end, b=start<=end?end:start;
+  const dates=[];
+  for(let d=new Date(a);d<=b;d=addDays(d,1)) dates.push(isoDateLocal(d));
+  return dates;
+}
 async function togglePerformanceDate(iso){
   if(performanceState.mode!=="days")performanceState.mode="days";
-  const set=new Set(performanceState.selectedDates);
-  if(set.has(iso))set.delete(iso);else set.add(iso);
-  performanceState.selectedDates=[...set].sort();
+  if(!performanceState.rangeStart){
+    performanceState.rangeStart=iso;
+    performanceState.selectedDates=[iso];
+  }else{
+    performanceState.selectedDates=datesBetweenInclusive(performanceState.rangeStart,iso);
+    performanceState.rangeStart=null;
+  }
   await loadPerformance(); renderDashboard();
 }
 
