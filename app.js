@@ -418,22 +418,6 @@ function renderDashboard(){
   const modeData=[["Sur place",total.revenue_on_site],["À emporter",total.revenue_takeaway],["Livraison",total.revenue_delivery]];
   const modeCards=modeData.map(([label,value])=>'<div class="card performance-card"><div class="stat-label">'+label+'</div><div class="stat-value">'+money(value)+'</div><div class="stat-note">'+(total.revenue_ttc?pct(Number(value||0)/total.revenue_ttc*100):"—")+' du CA</div></div>').join("");
 
-  const dailyByWeek={};
-  [...filteredDailyPerformance].sort((a,b)=>a.performance_date.localeCompare(b.performance_date)).forEach(r=>{
-    const weekStart=weekStartDate(parseIsoDate(r.performance_date));
-    const weekKey=isoDateLocal(weekStart);
-    (dailyByWeek[weekKey]??=[]).push(r);
-  });
-  const dailyRows=Object.keys(dailyByWeek).sort().map(weekKey=>{
-    const weekRows=dailyByWeek[weekKey].sort((a,b)=>a.performance_date.localeCompare(b.performance_date));
-    const weekStart=parseIsoDate(weekKey), weekEnd=addDays(weekStart,6);
-    const weekTotal=aggregatePerformance(weekRows);
-    return '<div class="performance-week-block">'+
-      '<div class="performance-week-title"><strong>Semaine du '+rangeLabel(weekStart,weekEnd)+'</strong><span>'+money(weekTotal.revenue_ttc)+' de CA</span></div>'+
-      '<div class="performance-daily-week-table">'+
-        weekRows.map(r=>'<div class="performance-daily-row"><div>'+dateLabel(r.performance_date)+'</div><div>'+esc(r.establishment_name)+'</div><div>'+money(r.revenue_ttc)+'</div><div>'+numberFr(r.clients)+'</div><div>'+numberFr(r.orders)+'</div><div>'+(r.average_ticket==null?"—":money(r.average_ticket))+'</div></div>').join("")+
-      '</div></div>';
-  }).join("");
 
   content.innerHTML=
     '<div class="performance-head"><div><div class="eyebrow">RÉSEAU · 7 BOUTIQUES</div><h2>'+esc(period.label)+'</h2><div class="muted">'+esc(rangeLabel(period.start,period.end))+'</div></div></div>'+
