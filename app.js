@@ -23,7 +23,7 @@ supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB
 const APP_VERSION="1.1.122";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null,selectedEstablishmentId:localStorage.getItem("cosy-establishment-id")||""};
 const data={tasks:[],documents:[],requests:[],reports:[],users:[],establishments:[],userEstablishmentAccess:[],performance:[],monthlyPerformance:[]};
-const performanceState={mode:"month",monthStart:new Date(new Date().getFullYear(),new Date().getMonth(),1),selectedDates:[]};
+const performanceState={mode:"month",monthStart:new Date(new Date().getFullYear(),new Date().getMonth(),1),selectedDates:[],establishmentId:""};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
@@ -320,10 +320,12 @@ function taskCard(t){
 function renderDashboard(){
   const period=performancePeriod();
   const monthlyMode=performanceState.mode==="month"&&data.monthlyPerformance.length>0;
-  const monthlyRows=data.establishments.map(store=>{
+  const visibleEstablishments=performanceState.establishmentId?data.establishments.filter(e=>e.id===performanceState.establishmentId):data.establishments;
+  const monthlyRows=visibleEstablishments.map(store=>{
     const m=data.monthlyPerformance.find(r=>r.establishment_id===store.id);
     return {store,metrics:m||{}};
   }).filter(x=>x.metrics.revenue_ttc!=null);
+  const filteredDailyPerformance=performanceState.establishmentId?data.performance.filter(r=>r.establishment_id===performanceState.establishmentId):data.performance;
   const total=monthlyMode?monthlyRows.reduce((a,x)=>{
     const m=x.metrics;
     a.revenue_ttc+=Number(m.revenue_ttc||0); a.revenue_target+=Number(m.revenue_target||0);
@@ -342,7 +344,7 @@ function renderDashboard(){
     a.coverDenominator+=Number(m.revenue_on_site||0)/Math.max(Number(m.average_cover||0),0.01);
     return a;
   },{revenue_ttc:0,revenue_target:0,revenue_on_site:0,revenue_takeaway:0,revenue_delivery:0,revenue_click_collect:0,revenue_pranzo:0,revenue_lalah:0,review_count:0,satisfactionSum:0,npsSum:0,ratingSum:0,reviewWeight:0,ticketNumerator:0,ticketDenominator:0,coverNumerator:0,coverDenominator:0})
-  :aggregatePerformance(data.performance);
+  :aggregatePerformance(filteredDailyPerformance);
   if(monthlyMode){
     total.average_ticket=total.ticketDenominator?total.ticketNumerator/total.ticketDenominator:null;
     total.average_cover=total.coverDenominator?total.coverNumerator/total.coverDenominator:null;
@@ -356,6 +358,7 @@ function renderDashboard(){
   const elapsedEnd=period.end>todayDate?todayDate:period.end;
   const daysElapsed=Math.max(1,Math.floor((elapsedEnd-period.start)/86400000)+1);
   const periodDays=Math.max(1,Math.floor((period.end-period.start)/86400000)+1);
+  const storeFilter='<label class="performance-store-filter"><span>Magasin</span><select id="performanceEstablishmentFilter"><option value="">Réseau — 7 boutiques</option>'+data.establishments.map(e=>'<option value="'+esc(e.id)+'" '+(performanceState.establishmentId===e.id?"selected":"")+'>'+esc(e.name)+'</option>').join("")+'</select></label>';
   const modeButton=(label,value)=>'<button type="button" class="performance-mode '+(performanceState.mode===value?"active":"")+'" data-performance-mode="'+value+'">'+label+'</button>';
 
   let storeRows="";
@@ -368,7 +371,7 @@ function renderDashboard(){
         '<div>'+numberFr(m.review_count||0)+'</div><div>'+(m.average_rating==null?"—":Number(m.average_rating).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}))+'</div></div>';
     }).join("");
   }else{
-    const rowsByStore=data.establishments.map(e=>({store:e,metrics:aggregatePerformance(data.performance.filter(r=>r.establishment_id===e.id))}));
+    const rowsByStore=visibleEstablishments.map(e=>({store:e,metrics:aggregatePerformance(filteredDailyPerformance.filter(r=>r.establishment_id===e.id))}));
     storeRows=rowsByStore.map(x=>{
       const m=x.metrics;
       return '<div class="performance-store-row"><div class="performance-store-name"><strong>'+esc(x.store.name)+'</strong><span>'+esc(x.store.code||"")+'</span></div>'+
@@ -392,7 +395,7 @@ function renderDashboard(){
       '<div>'+money(m.revenue_on_site)+'</div><div>'+money(m.revenue_takeaway)+'</div><div>'+money(m.revenue_delivery)+'</div><div>'+money(m.revenue_click_collect)+'</div></div>';
   }).join(""):"";
 
-  const dailyRows=[...data.performance].sort((a,b)=>a.performance_date.localeCompare(b.performance_date)).map(r=>
+  const dailyRows=[...filteredDailyPerformance].sort((a,b)=>a.performance_date.localeCompare(b.performance_date)).map(r=>
     '<div class="performance-daily-row"><div>'+dateLabel(r.performance_date)+'</div><div>'+esc(r.establishment_name)+'</div><div>'+money(r.revenue_ttc)+'</div><div>'+numberFr(r.clients)+'</div><div>'+numberFr(r.orders)+'</div><div>'+(r.average_ticket==null?"—":money(r.average_ticket))+'</div></div>'
   ).join("");
 
@@ -418,7 +421,7 @@ function renderDashboard(){
       (storeRows||'<div class="empty">Aucune boutique.</div>')+'</div>'+
     '<div class="section-title"><div><h2>Détail des journées</h2><div class="muted">Les données sont journalières ; les vues semaine et mois sont calculées automatiquement.</div></div></div>'+
     '<div class="performance-daily-table"><div class="performance-daily-header"><div>Journée</div><div>Boutique</div><div>CA</div><div>Clients</div><div>Commandes</div><div>Ticket</div></div>'+
-      (data.performance.length?dailyRows:'<div class="empty">Aucune donnée DVORE importée pour cette période.</div>')+'</div>';
+      (filteredDailyPerformance.length?dailyRows:'<div class="empty">Aucune donnée DVORE importée pour cette période.</div>')+'</div>';
 }
 function renderDocuments(){
  const reorderable=can("document");
@@ -701,6 +704,7 @@ async function openModal(type){
  m.querySelector("input,select,textarea")?.focus();
 }
 
+document.addEventListener("change",async e=>{if(e.target?.id==="performanceEstablishmentFilter"){performanceState.establishmentId=e.target.value||"";renderDashboard();}});
 document.addEventListener("click",async e=>{
  const close=e.target.closest("[data-close]");if(close){closeModal();return;}
  const nav=e.target.closest("[data-view]");if(nav){state.view=nav.dataset.view;document.body.classList.remove("mobile-nav-open");const mm=document.querySelector("[data-mobile-menu]");if(mm)mm.setAttribute("aria-expanded","false");render();return;}
