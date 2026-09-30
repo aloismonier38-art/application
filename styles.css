@@ -971,3 +971,21 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
  .performance-cards{grid-template-columns:1fr}
  .performance-mode{padding:8px 10px}
 }
+
+
+/* Performance réseau — alignement des colonnes numériques */
+.performance-store-header > div:not(:first-child),
+.performance-daily-header > div:nth-child(n+3) {
+  text-align: right;
+}
+.performance-store-row > div:not(:first-child),
+.performance-daily-row > div:nth-child(n+3) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.performance-store-header,
+.performance-store-row,
+.performance-daily-header,
+.performance-daily-row {
+  column-gap: 14px;
+}
