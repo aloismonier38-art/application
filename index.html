@@ -13,6 +13,158 @@
 
 .signup-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px}.signup-modal[hidden]{display:none}.signup-backdrop{position:absolute;inset:0;background:rgba(23,66,53,.58);backdrop-filter:blur(4px)}.signup-dialog{position:relative;z-index:1;width:min(440px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 28px 90px rgba(0,0,0,.28);color:var(--green)}.signup-dialog form{display:grid;gap:13px;margin-top:20px}.signup-dialog label{display:grid;gap:6px;font-size:12px;font-weight:650;color:#53645c}.signup-dialog input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:11px;background:#fff;color:var(--green);font:inherit}.signup-close{position:absolute;right:16px;top:12px;border:0;background:transparent;font-size:28px;line-height:1;color:#748078;cursor:pointer}.signup-dialog h2{margin:0 0 6px;font-size:24px}body.dark .signup-backdrop{background:rgba(0,0,0,.7)}body.dark .signup-dialog{background:#202622;border-color:#303733;color:#e8eee9}body.dark .signup-dialog label{color:#b8c5bf}body.dark .signup-dialog input{background:#181d1a;border-color:#3a433e;color:#e8eee9}
 </style>
+
+<style id="mobile-performance-fixes">
+/* iPhone / mobile performance layout fixes */
+html,body{max-width:100%;overflow-x:hidden}
+@media(max-width:850px){
+  .main{padding-top:env(safe-area-inset-top);width:100%;min-width:0}
+  .topbar{min-width:0}
+  .topbar h1{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .main section{width:100%;min-width:0}
+  .performance-head{display:block}
+  .performance-head h2{font-size:20px;line-height:1.2}
+  .performance-head .muted{margin-top:5px}
+  .section-title{align-items:flex-start}
+  .section-title h2{font-size:20px;line-height:1.2}
+  .performance-toolbar{width:100%;min-width:0}
+  .performance-modes{max-width:100%;overflow-x:auto}
+  .performance-mode{white-space:nowrap}
+  .performance-calendar-wrap{width:100%;min-width:0}
+  .performance-table,
+  .performance-ranking-table,
+  .performance-activity-table,
+  .performance-satisfaction-table,
+  .performance-forecast-table,
+  .performance-daily-table{overflow:visible;min-width:0;width:100%}
+
+  /* Transform wide desktop tables into readable mobile cards. */
+  .performance-table .performance-store-header,
+  .performance-ranking-header,
+  .performance-activity-header,
+  .performance-satisfaction-header,
+  .performance-forecast-header,
+  .performance-daily-header{display:none}
+
+  .performance-table .performance-store-row,
+  .performance-ranking-row,
+  .performance-activity-row,
+  .performance-satisfaction-row,
+  .performance-forecast-row,
+  .performance-week-block .performance-daily-row{
+    display:grid;
+    min-width:0!important;
+    width:100%;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:0 18px;
+    padding:14px;
+    align-items:start;
+  }
+
+  .performance-table .performance-store-row>div,
+  .performance-ranking-row>div,
+  .performance-activity-row>div,
+  .performance-satisfaction-row>div,
+  .performance-forecast-row>div,
+  .performance-week-block .performance-daily-row>div{
+    min-width:0;
+    padding:7px 0;
+    text-align:left!important;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    border-bottom:1px solid var(--line);
+  }
+
+  .performance-table .performance-store-row>div:first-child,
+  .performance-ranking-row>div:nth-child(2),
+  .performance-activity-row>div:first-child,
+  .performance-satisfaction-row>div:first-child,
+  .performance-forecast-row>div:first-child,
+  .performance-week-block .performance-daily-row>div:nth-child(1),
+  .performance-week-block .performance-daily-row>div:nth-child(2){
+    grid-column:1/-1;
+  }
+
+  .performance-table .performance-store-row>div:last-child,
+  .performance-ranking-row>div:last-child,
+  .performance-activity-row>div:last-child,
+  .performance-satisfaction-row>div:last-child,
+  .performance-forecast-row>div:last-child,
+  .performance-week-block .performance-daily-row>div:last-child{border-bottom:0}
+
+  .performance-table .performance-store-row>div:not(:first-child)::before,
+  .performance-ranking-row>div:first-child::before,
+  .performance-ranking-row>div:nth-child(3)::before,
+  .performance-ranking-row>div:nth-child(4)::before,
+  .performance-activity-row>div:nth-child(n+2)::before,
+  .performance-satisfaction-row>div:nth-child(n+2)::before,
+  .performance-forecast-row>div:nth-child(n+2)::before,
+  .performance-week-block .performance-daily-row>div:nth-child(n+3)::before{
+    display:block;
+    margin-bottom:2px;
+    color:var(--muted);
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+
+  .performance-table .performance-store-row>div:nth-child(2)::before{content:"CA réalisé"}
+  .performance-table .performance-store-row>div:nth-child(3)::before{content:"Objectif"}
+  .performance-table .performance-store-row>div:nth-child(4)::before{content:"Réalisation"}
+  .performance-table .performance-store-row>div:nth-child(5)::before{content:"Indicateur"}
+  .performance-table .performance-store-row>div:nth-child(6)::before{content:"Ticket"}
+  .performance-table .performance-store-row>div:nth-child(7)::before{content:"Note"}
+
+  .performance-ranking-row>div:first-child::before{content:"Rang"}
+  .performance-ranking-row>div:nth-child(3)::before{content:"CA"}
+  .performance-ranking-row>div:nth-child(4)::before{content:"% objectif"}
+
+  .performance-activity-row>div:nth-child(2)::before{content:"Couvert moyen"}
+  .performance-activity-row>div:nth-child(3)::before{content:"Ticket moyen"}
+  .performance-activity-row>div:nth-child(4)::before{content:"Sur place"}
+  .performance-activity-row>div:nth-child(5)::before{content:"À emporter"}
+  .performance-activity-row>div:nth-child(6)::before{content:"Livraison"}
+
+  .performance-satisfaction-row>div:nth-child(2)::before{content:"Note"}
+  .performance-satisfaction-row>div:nth-child(3)::before{content:"Nb avis"}
+  .performance-satisfaction-row>div:nth-child(4)::before{content:"Satisfaction"}
+  .performance-satisfaction-row>div:nth-child(5)::before{content:"NPS"}
+
+  .performance-forecast-row>div:nth-child(2)::before{content:"Semaine en cours"}
+  .performance-forecast-row>div:nth-child(3)::before{content:"S+1"}
+
+  .performance-week-block .performance-daily-row>div:nth-child(3)::before{content:"CA"}
+  .performance-week-block .performance-daily-row>div:nth-child(4)::before{content:"Clients"}
+  .performance-week-block .performance-daily-row>div:nth-child(5)::before{content:"Commandes"}
+  .performance-week-block .performance-daily-row>div:nth-child(6)::before{content:"Ticket"}
+
+  .performance-store-name strong{display:block;line-height:1.25}
+  .performance-store-name span{display:block}
+  .performance-week-block .performance-daily-row{border-bottom:1px solid var(--line)!important}
+  .performance-week-block .performance-daily-row:last-child{border-bottom:0!important}
+  .performance-week-title{padding:13px 14px;align-items:flex-start}
+  .performance-week-title strong{line-height:1.25}
+  .performance-week-title span{white-space:nowrap}
+  .performance-daily-week-table{overflow:visible}
+
+  .performance-ranking-row>div:nth-child(2),
+  .performance-activity-row>div:first-child,
+  .performance-satisfaction-row>div:first-child,
+  .performance-forecast-row>div:first-child,
+  .performance-table .performance-store-row>div:first-child{
+    padding-bottom:10px;
+    margin-bottom:2px;
+  }
+}
+@media(max-width:520px){
+  .performance-cards{grid-template-columns:1fr 1fr!important;gap:9px}
+  .performance-card{min-height:104px;padding:13px}
+  .performance-card .stat-value{font-size:21px}
+  .performance-card .stat-label{font-size:11px}
+  .performance-card .stat-note{font-size:10px}
+}
+</style>
 </head>
 <body><div id="authGate" class="auth-gate">
   <div class="auth-shell">
