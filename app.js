@@ -454,9 +454,7 @@ function renderDashboard(){
     '<div class="section-title"><div><h2>Répartition du CA par mode de consommation</h2><div class="muted">Toujours visible sur la page d’accueil.</div></div></div>'+
     '<div class="performance-cards performance-mode-cards">'+modeCards+'</div>'+
 
-    '<div class="section-title"><div><h2>Détail des journées</h2><div class="muted">Les données restent journalières pour les vues semaine et journées.</div></div></div>'+
-    '<div class="performance-daily-table"><div class="performance-daily-header"><div>Journée</div><div>Boutique</div><div>CA</div><div>Clients</div><div>Commandes</div><div>Ticket</div></div>'+
-      (filteredDailyPerformance.length?dailyRows:'<div class="empty">Aucune donnée DVORE importée pour cette période.</div>')+'</div>';
+;
 }
 function renderDocuments(){
  const reorderable=can("document");
