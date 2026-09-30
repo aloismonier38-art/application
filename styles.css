@@ -1020,3 +1020,39 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
   .performance-mode-cards{grid-template-columns:1fr 1fr}
 }
 @media(max-width:520px){.performance-mode-cards{grid-template-columns:1fr}}
+
+/* Accueil performance — tous les tableaux restent visibles */
+.performance-ranking-table,.performance-activity-table,.performance-satisfaction-table,.performance-forecast-table{
+  background:#fff;border:1px solid var(--line);border-radius:12px;overflow:auto;margin-bottom:22px;
+}
+.performance-ranking-header,.performance-ranking-row{
+  display:grid;grid-template-columns:70px minmax(180px,1.6fr) minmax(120px,1fr) minmax(110px,1fr);
+  min-width:600px;align-items:center;gap:14px;padding:12px 15px;
+}
+.performance-ranking-header,.performance-activity-header,.performance-satisfaction-header,.performance-forecast-header{
+  background:#f7f6f2;color:var(--muted);font-size:10px;text-transform:uppercase;font-weight:800;letter-spacing:.04em;
+}
+.performance-ranking-row{border-top:1px solid var(--line);font-size:13px}
+.performance-ranking-row>div:not(:nth-child(2)){text-align:right;font-variant-numeric:tabular-nums}
+.performance-activity-header,.performance-activity-row{
+  display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(5,minmax(105px,1fr));
+  min-width:760px;align-items:center;gap:14px;padding:12px 15px;
+}
+.performance-activity-row{border-top:1px solid var(--line);font-size:13px}
+.performance-activity-row>div:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.performance-satisfaction-header,.performance-satisfaction-row{
+  display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(4,minmax(100px,1fr));
+  min-width:650px;align-items:center;gap:14px;padding:12px 15px;
+}
+.performance-satisfaction-row{border-top:1px solid var(--line);font-size:13px}
+.performance-satisfaction-row>div:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.performance-forecast-header,.performance-forecast-row{
+  display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(2,minmax(130px,1fr));
+  min-width:560px;align-items:center;gap:14px;padding:12px 15px;
+}
+.performance-forecast-row{border-top:1px solid var(--line);font-size:13px}
+.performance-forecast-row>div:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.performance-forecast-row.group{background:#fbefef;font-weight:700}
+@media(max-width:700px){
+  .performance-ranking-header,.performance-ranking-row{grid-template-columns:55px minmax(150px,1.4fr) minmax(105px,1fr) minmax(95px,1fr)}
+}
