@@ -22,7 +22,7 @@ supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB
 
 const APP_VERSION="1.1.118";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null,selectedEstablishmentId:localStorage.getItem("cosy-establishment-id")||""};
-const data={tasks:[],documents:[],requests:[],reports:[],users:[],establishments:[],userEstablishmentAccess:[],performance:[]};
+const data={tasks:[],documents:[],requests:[],reports:[],users:[],establishments:[],userEstablishmentAccess:[],performance:[],monthlyPerformance:[]};
 const performanceState={mode:"month",monthStart:new Date(new Date().getFullYear(),new Date().getMonth(),1),selectedDates:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
