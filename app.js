@@ -279,6 +279,7 @@ function establishmentLabel(){
 }
 function setEstablishmentContext(id){
   state.selectedEstablishmentId=id||"";
+  performanceState.establishmentId=state.selectedEstablishmentId;
   localStorage.setItem("cosy-establishment-id",state.selectedEstablishmentId);
   const menu=$("#establishmentMenu");
   const current=$("#establishmentCurrent");
