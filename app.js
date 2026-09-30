@@ -196,10 +196,14 @@ async function loadPerformance(){
     const parsed=dates.map(parseIsoDate).sort((a,b)=>a-b);
     start=parsed[0]; end=parsed[parsed.length-1];
   }
-  let query=supabase.from("network_daily_dashboard").select("*").gte("performance_date",isoDateLocal(start)).lte("performance_date",isoDateLocal(end)).order("performance_date",{ascending:true});
-  const {data:rows,error}=await query;
-  if(error)throw error;
+  const dailyQuery=supabase.from("network_daily_dashboard").select("*").gte("performance_date",isoDateLocal(start)).lte("performance_date",isoDateLocal(end)).order("performance_date",{ascending:true});
+  const monthKey=isoDateLocal(monthStartDate(performanceState.monthStart));
+  const monthlyQuery=supabase.from("monthly_network_performance").select("*").eq("performance_month",monthKey);
+  const [{data:rows,error:dailyError},{data:monthlyRows,error:monthlyError}]=await Promise.all([dailyQuery,monthlyQuery]);
+  if(dailyError)throw dailyError;
+  if(monthlyError)throw monthlyError;
   data.performance=(rows||[]).filter(r=>performanceState.mode!=="days"||performanceState.selectedDates.includes(r.performance_date));
+  data.monthlyPerformance=monthlyRows||[];
 }
 function aggregatePerformance(rows){
   const out={revenue_ttc:0,revenue_ht:0,clients:0,new_clients:0,orders:0,revenue_on_site:0,revenue_takeaway:0,revenue_delivery:0,revenue_target:0,latest_rating:null,latest_reviews:null};
