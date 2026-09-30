@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>CosyHub — Gestion des équipes</title>
-  <link rel="stylesheet" href="styles.css?v=35">
+  <title>PIZZA COSY — Espace d'équipe</title>
+  <link rel="stylesheet" href="styles.css?v=130">
 <style>
 .auth-gate{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:20px;background:var(--cream)}
 .auth-gate[hidden]{display:none}#app[hidden]{display:none}
@@ -14,68 +14,79 @@
 .signup-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px}.signup-modal[hidden]{display:none}.signup-backdrop{position:absolute;inset:0;background:rgba(23,66,53,.58);backdrop-filter:blur(4px)}.signup-dialog{position:relative;z-index:1;width:min(440px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 28px 90px rgba(0,0,0,.28);color:var(--green)}.signup-dialog form{display:grid;gap:13px;margin-top:20px}.signup-dialog label{display:grid;gap:6px;font-size:12px;font-weight:650;color:#53645c}.signup-dialog input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:11px;background:#fff;color:var(--green);font:inherit}.signup-close{position:absolute;right:16px;top:12px;border:0;background:transparent;font-size:28px;line-height:1;color:#748078;cursor:pointer}.signup-dialog h2{margin:0 0 6px;font-size:24px}body.dark .signup-backdrop{background:rgba(0,0,0,.7)}body.dark .signup-dialog{background:#202622;border-color:#303733;color:#e8eee9}body.dark .signup-dialog label{color:#b8c5bf}body.dark .signup-dialog input{background:#181d1a;border-color:#3a433e;color:#e8eee9}
 </style>
 </head>
-<body>
-  <div id="appVersion" class="app-version">CosyHub 1.1.35</div>
-  <div id="authGate" class="auth-gate">
+<body><div id="authGate" class="auth-gate">
   <div class="auth-shell">
-    <div class="auth-brand-top"><div><strong>CosyHub</strong><small>Gestion des équipes</small></div></div>
-    <div class="auth-panels">
+    <div class="auth-brand-top">
+      <div>
+        <strong>PIZZA COSY <span class="app-version-inline">1.2.0</span></strong>
+        <small>Espace d'équipe</small>
+      </div>
+    </div>
+
+    <div class="auth-panels auth-single-card">
       <section class="auth-panel login-panel">
         <span class="auth-kicker">ESPACE ÉQUIPE</span>
         <h2>Connexion</h2>
         <p class="auth-panel-text">Accédez à votre espace Pizza Cosy.</p>
+
         <form id="authForm" class="auth-form">
-          <label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label>
-          <label>Mot de passe<input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
+          <label>Email
+            <input id="authEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr">
+          </label>
+
+          <label>Mot de passe
+            <input id="authPassword" type="password" required autocomplete="current-password" placeholder="••••••••">
+          </label>
+
           <button class="btn" id="authSubmit" type="submit">Se connecter</button>
         </form>
+
+        <button class="auth-forgot" id="forgotPassword" type="button">Mot de passe oublié ?</button>
         <p id="authMessage" class="auth-message">Connectez-vous pour accéder à votre équipe.</p>
       </section>
-      <section class="auth-panel signup-panel">
-        <span class="auth-kicker">NOUVEAU MEMBRE</span>
-        <h2>Créer mon compte</h2>
-        <p class="auth-panel-text">Créez votre accès en quelques secondes.</p>
-        <form id="signupForm" class="auth-form">
-          <label>Email<input id="signupEmail" type="email" required autocomplete="email" placeholder="vous@exemple.fr"></label>
-          <label>Mot de passe<input id="signupPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="6 caractères minimum"></label>
-          <button class="btn auth-signup-btn" id="signupSubmit" type="submit">Créer le compte</button>
-        </form>
-        <p class="auth-help">Votre profil et votre rôle seront associés à votre compte.</p>
+
+      <section class="auth-panel signup-panel auth-invite-panel">
+        <div class="auth-invite-divider"></div>
+        <div class="auth-invite-content">
+          <div class="auth-invite-icon">✓</div>
+          <div>
+            <span class="auth-kicker">ACCÈS SÉCURISÉ</span>
+            <strong>Pas encore de compte ?</strong>
+            <span>Votre accès est créé par un administrateur PIZZA COSY. Contactez-le pour recevoir votre invitation par e-mail.</span>
+          </div>
+        </div>
       </section>
     </div>
   </div>
 </div>
   <div id="app" hidden>
     <aside class="sidebar">
-      <div class="brand"><div><strong>CosyHub</strong><small>Gestion des équipes</small></div></div>
+      <div class="establishment-switcher"><button type="button" class="establishment-current" id="establishmentCurrent" data-establishment-menu aria-expanded="false"><strong>PIZZA COSY</strong><small>Chargement…</small><span class="establishment-chevron">⌄</span></button><div class="establishment-menu" id="establishmentMenu" hidden></div></div>
       <nav>
 <button class="nav-item active" data-view="dashboard"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V19h11v-8.5"/><path d="M10 19v-5h4v5"/></svg></span><span>Tableau de bord</span></button>
+
+        <button class="nav-item" data-view="access"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.7-3.2 2.6-5 5.5-5s4.8 1.8 5.5 5"/><path d="M15.5 11.5a3 3 0 1 0 0-6"/><path d="M16 14c2.4.2 3.9 1.8 4.5 5"/></svg></span><span>Accès</span></button>
 <button class="nav-item" data-view="documents"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v5h4"/><path d="M9 12h6M9 15.5h6"/></svg></span><span>Fiches techniques</span></button>
-<button class="nav-item" data-view="tasks"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 2.2 2.2L16 8.8"/></svg></span><span>To-do list</span></button>
-<button class="nav-item" data-view="requests"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.2 2.2-2.8-2.8z"/></svg></span><span>Besoins & interventions</span></button>
-<button class="nav-item" data-view="reports"><span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/><path d="M3 20h18"/></svg></span><span>Rapports hebdomadaires</span></button>
 </nav>
       <div class="sidebar-bottom">
-        <div class="user-card"><div class="avatar">AM</div><div><strong>Aloïs Monier</strong><small id="roleLabel">Administrateur</small></div></div>
+        
+        <div class="user-card" data-view="settings" role="button" tabindex="0" title="Ouvrir les paramètres"><div class="avatar">AM</div><div><strong id="sidebarUserName">Aloïs Monier</strong><small id="roleLabel">Administrateur</small></div></div>
       </div>
     </aside>
+    <div class="mobile-sidebar-overlay" data-mobile-menu-close></div>
     <main class="main">
       <header class="topbar">
-        <div><span class="eyebrow">Équipe</span><h1 id="pageTitle">Tableau de bord</h1></div>
-        <div class="top-actions"><span class="status-dot"></span><span>Connecté</span><button id="themeToggle" class="theme-toggle" aria-label="Activer le mode sombre"><span class="theme-switch"></span><span class="theme-label">Sombre</span></button><button id="roleToggle" class="role-toggle">Admin ▾</button></div>
+        <button class="mobile-menu-btn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" data-mobile-menu>☰</button>
+        <div><h1 id="pageTitle">Performance réseau</h1></div>
+        <div class="top-actions"></div>
       </header>
       <section id="content"></section>
     </main>
-<div class="bottom-nav">
-<button class="active" data-view="dashboard"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V19h11v-8.5"/><path d="M10 19v-5h4v5"/></svg></span><span>Accueil</span></button>
-<button data-view="documents"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v5h4"/><path d="M9 12h6M9 15.5h6"/></svg></span><span>Fiches</span></button>
-<button data-view="tasks"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 2.2 2.2L16 8.8"/></svg></span><span>Tâches</span></button>
-<button data-view="requests"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.2 2.2-2.8-2.8z"/></svg></span><span>Besoins</span></button>
-<button data-view="reports"><span class="bottom-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/><path d="M3 20h18"/></svg></span><span>Rapports</span></button>
-</div>
+
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="supabase-config.js?v=35"></script>
-  <script src="auth.js?v=35"></script>
+  <script src="supabase-config.js?v=130"></script>
+  <script src="app.js?v=130"></script>
+  
 </body>
 </html>

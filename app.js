@@ -2,6 +2,8 @@
   'use strict';
 let supabase;
 window.__teamhubAppScriptLoaded=true;
+// PIZZA COSY 1.1.63 — version centralisée.
+// PIZZA COSY: structure validated — modal branches are explicitly closed.
 function showFatal(message){
   const gate=document.getElementById("authGate");
   const msg=document.getElementById("authMessage");
@@ -18,13 +20,15 @@ if(!window.TEAMHUB_SUPABASE_URL || !window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY){
 }
 supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 
-const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null};
-const data={tasks:[],documents:[],requests:[],reports:[]};
+const APP_VERSION="1.1.130";
+const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null,selectedEstablishmentId:localStorage.getItem("cosy-establishment-id")||""};
+const data={tasks:[],documents:[],requests:[],reports:[],users:[],establishments:[],userEstablishmentAccess:[],performance:[],monthlyPerformance:[]};
+const performanceState={mode:"month",monthStart:new Date(new Date().getFullYear(),new Date().getMonth(),1),selectedDates:[],rangeStart:null,establishmentId:localStorage.getItem("cosy-establishment-id")||""};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
-const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),roleToggle=$("#roleToggle"),themeToggle=$("#themeToggle");
+const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
-const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",tasks:"To-do list",requests:"Besoins & interventions",reports:"Rapports hebdomadaires"};
+const titles={dashboard:"Performance réseau",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
@@ -35,6 +39,23 @@ function can(a){return state.role==="admin"||(state.role==="manager"&&["task","d
 function priorityLabel(v){return ({normal:"Normale",high:"Haute",urgent:"Urgente"})[v]||v;}
 function priorityValue(v){return ({Normale:"normal",Haute:"high",Urgente:"urgent"})[v]||"normal";}
 function roleText(v){return ({admin:"Administrateur",manager:"Manager",employee:"Salarié"})[v]||"Salarié";}
+function splitPersonName(fullName){
+  const parts=String(fullName||"").trim().split(/\s+/).filter(Boolean);
+  if(parts.length<2)return {firstName:parts[0]||"",lastName:""};
+  if(parts[0]===parts[0].toUpperCase() && /[A-ZÀ-ÖØ-Þ]/.test(parts[0])) return {firstName:parts.slice(1).join(" "),lastName:parts[0]};
+  return {firstName:parts.slice(0,-1).join(" "),lastName:parts.at(-1)};
+}
+function formatPersonName(firstName,lastName){
+  return String(firstName||"").trim()+" "+String(lastName||"").trim().toLocaleUpperCase("fr-FR");
+}
+function initialsForName(fullName){
+  const n=splitPersonName(fullName);
+  return ((n.firstName[0]||"")+(n.lastName[0]||"")).toUpperCase()||"?";
+}
+function displayPersonName(fullName){
+  const n=splitPersonName(fullName);
+  return n.firstName && n.lastName ? formatPersonName(n.firstName,n.lastName) : String(fullName||"");
+}
 
 function showAuth(show=true){
   authGate.hidden=!show;
@@ -55,26 +76,251 @@ function setAuthMode(mode){
 function authError(msg){authMessage.textContent=msg;authMessage.style.color="#b94d61";}
 function authInfo(msg){authMessage.textContent=msg;authMessage.style.color="";}
 
-async function loadProfile(){
-  const {data:profile,error}=await supabase.from("profiles").select("*").eq("id",(await supabase.auth.getUser()).data.user.id).single();
-  if(error)throw error;
-  state.profile=profile;state.role=profile.role;
-}
-async function loadData(){
-  const est=state.profile?.establishment_id;
-  const [tasks,documents,requests,reports]=await Promise.all([
-    supabase.from("tasks").select("*").order("due_date",{ascending:true}),
-    supabase.from("documents").select("*").order("updated_at",{ascending:false}),
-    supabase.from("requests").select("*").order("created_at",{ascending:false}),
-    supabase.from("reports").select("*").order("created_at",{ascending:false})
-  ]);
-  for(const r of [tasks,documents,requests,reports])if(r.error)throw r.error;
-  data.tasks=(tasks.data||[]).map(t=>({id:t.id,title:t.title,description:t.description,assignee:t.assigned_to,due:t.due_date,priority:t.priority,repeat:t.recurrence||"Aucune",done:t.status==="done",completedAt:t.completed_at}));
-  data.documents=documents.data||[];
-  data.requests=(requests.data||[]).map(r=>({id:r.id,title:r.title,kind:r.request_type,status:r.status,priority:r.priority,description:r.description}));
-  data.reports=reports.data||[];
+function showRuntimeError(err){
+  console.error("CosyHub runtime error:",err);
+  if(content){
+    content.innerHTML='<div class="empty" style="text-align:left"><strong>CosyHub rencontre une erreur.</strong><br><span class="muted">'+esc(err?.message||String(err)||"Erreur inconnue")+'</span></div>';
+  }
 }
 
+async function handleLogin(e){
+  e.preventDefault();
+  if(!authSubmit)return;
+  authSubmit.disabled=true;
+  try{
+    const email=$("#authEmail")?.value.trim()||"";
+    const password=$("#authPassword")?.value||"";
+    const {error}=await supabase.auth.signInWithPassword({email,password});
+    if(error)throw error;
+    showAuth(false);
+    await boot();
+  }catch(err){authError(err?.message||"Impossible de se connecter.");}
+  finally{authSubmit.disabled=false;}
+}
+
+async function handleSignup(e){
+  e.preventDefault();
+  const submit=$("#signupSubmit");
+  if(submit)submit.disabled=true;
+  try{
+    const email=$("#signupEmail")?.value.trim()||"";
+    const password=$("#signupPassword")?.value||"";
+    const {data:result,error}=await supabase.auth.signUp({email,password});
+    if(error)throw error;
+    if(result?.session){
+      showAuth(false);
+      await boot();
+    }else{
+      authInfo("Compte créé. Vérifiez votre e-mail puis connectez-vous.");
+      authForm?.reset();
+      $("#signupForm")?.reset();
+    }
+  }catch(err){authError(err?.message||"Impossible de créer le compte.");}
+  finally{if(submit)submit.disabled=false;}
+}
+
+authForm?.addEventListener("submit",handleLogin);
+$("#signupForm")?.addEventListener("submit",handleSignup);
+
+
+async function loadProfile(){
+  const {data:{user},error:userError}=await supabase.auth.getUser();
+  if(userError)throw userError;
+  if(!user)throw new Error("Session utilisateur introuvable.");
+  const {data:profile,error}=await supabase.rpc("get_my_profile");
+  if(error)throw error;
+  if(!profile)throw new Error("Profil utilisateur introuvable.");
+  state.profile={...profile,email:user.email||""};
+  state.role=profile.role;
+}
+async function loadEstablishments(){
+  const {data:establishments,error}=await supabase.rpc("get_my_establishments");
+  if(error)throw error;
+  data.establishments=establishments||[];
+  if(!data.establishments.some(e=>e.id===state.selectedEstablishmentId)){
+    state.selectedEstablishmentId=data.establishments.length===1?data.establishments[0].id:"";
+    localStorage.setItem("cosy-establishment-id",state.selectedEstablishmentId);
+  }
+}
+async function loadUsers(){
+  if(state.role!=="admin"){data.users=[];data.userEstablishmentAccess=[];return;}
+  const [{data:users,error:userError},{data:access,error:accessError}]=await Promise.all([
+    supabase.from("profiles").select("id,full_name,role,phone,login_email,is_active,must_set_password").order("full_name",{ascending:true}),
+    supabase.rpc("admin_get_user_establishments")
+  ]);
+  if(userError)throw userError;
+  if(accessError)throw accessError;
+  data.users=users||[];
+  data.userEstablishmentAccess=access||[];
+}
+async function loadData(){
+  await loadEstablishments();
+  const {data:documents,error}=await supabase.from("documents").select("*").order("updated_at",{ascending:false});
+  if(error)throw error;
+  data.documents=documents||[];
+  await loadUsers();
+  await loadPerformance();
+}
+
+function isoDateLocal(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");
+  return y+"-"+m+"-"+day;
+}
+function parseIsoDate(v){return new Date(v+"T12:00:00");}
+function monthStartDate(d){return new Date(d.getFullYear(),d.getMonth(),1);}
+function monthEndDate(d){return new Date(d.getFullYear(),d.getMonth()+1,0);}
+function weekStartDate(d){
+  const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const day=(x.getDay()+6)%7;
+  x.setDate(x.getDate()-day);
+  return x;
+}
+function money(v){return Number(v||0).toLocaleString("fr-FR",{minimumFractionDigits:0,maximumFractionDigits:0})+" €";}
+function pct(v){return v==null?"—":Number(v).toLocaleString("fr-FR",{minimumFractionDigits:0,maximumFractionDigits:1})+" %";}
+function numberFr(v){return Number(v||0).toLocaleString("fr-FR");}
+function monthLabel(d){return d.toLocaleDateString("fr-FR",{month:"long",year:"numeric"}).replace(/^./,x=>x.toUpperCase());}
+function rangeLabel(start,end){
+  if(isoDateLocal(start)===isoDateLocal(end))return start.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+  return start.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" → "+end.toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+
+async function loadPerformance(){
+  let start,end;
+  if(performanceState.mode==="month"){
+    start=monthStartDate(performanceState.monthStart); end=monthEndDate(performanceState.monthStart);
+  }else if(performanceState.mode==="week"){
+    start=weekStartDate(performanceState.monthStart); end=addDays(start,6);
+  }else{
+    const dates=performanceState.selectedDates.length?performanceState.selectedDates:[isoDateLocal(new Date())];
+    const parsed=dates.map(parseIsoDate).sort((a,b)=>a-b);
+    start=parsed[0]; end=parsed[parsed.length-1];
+  }
+  const dailyQuery=supabase.from("network_daily_dashboard").select("*").gte("performance_date",isoDateLocal(start)).lte("performance_date",isoDateLocal(end)).order("performance_date",{ascending:true});
+  const monthKey=isoDateLocal(monthStartDate(performanceState.monthStart));
+  const monthlyQuery=supabase.from("monthly_network_performance").select("*").eq("performance_month",monthKey);
+  const [{data:rows,error:dailyError},{data:monthlyRows,error:monthlyError}]=await Promise.all([dailyQuery,monthlyQuery]);
+  if(dailyError)throw dailyError;
+  if(monthlyError)throw monthlyError;
+  data.performance=(rows||[]).filter(r=>performanceState.mode!=="days"||performanceState.selectedDates.includes(r.performance_date));
+  data.monthlyPerformance=monthlyRows||[];
+}
+function aggregatePerformance(rows){
+  const out={revenue_ttc:0,revenue_ht:0,clients:0,new_clients:0,orders:0,revenue_on_site:0,revenue_takeaway:0,revenue_delivery:0,revenue_target:0,latest_rating:null,latest_reviews:null};
+  for(const r of rows){
+    out.revenue_ttc+=Number(r.revenue_ttc||0);
+    out.revenue_ht+=Number(r.revenue_ht||0);
+    out.clients+=Number(r.clients||0);
+    out.new_clients+=Number(r.new_clients||0);
+    out.orders+=Number(r.orders||0);
+    out.revenue_on_site+=Number(r.revenue_on_site||0);
+    out.revenue_takeaway+=Number(r.revenue_takeaway||0);
+    out.revenue_delivery+=Number(r.revenue_delivery||0);
+    out.revenue_target+=Number(r.revenue_target_daily||0);
+    if(r.google_rating!=null && (out.latest_rating==null || r.performance_date>out.latestRatingDate)){out.latest_rating=Number(r.google_rating);out.latestRatingDate=r.performance_date;}
+    if(r.google_review_count!=null && (out.latest_reviews==null || r.performance_date>out.latestReviewsDate)){out.latest_reviews=Number(r.google_review_count);out.latestReviewsDate=r.performance_date;}
+  }
+  out.average_ticket=out.orders?out.revenue_ttc/out.orders:null;
+  out.average_cover=out.clients?out.revenue_on_site/out.clients:null;
+  out.target_pct=out.revenue_target?out.revenue_ttc/out.revenue_target*100:null;
+  return out;
+}
+function calendarHtml(){
+  const cursor=monthStartDate(performanceState.monthStart);
+  const first=weekStartDate(cursor), last=addDays(first, 41);
+  const selected=new Set(performanceState.selectedDates);
+  let html='<div class="performance-calendar-head"><button type="button" class="calendar-nav" data-performance-month="-1">‹</button><strong>'+esc(monthLabel(cursor))+'</strong><button type="button" class="calendar-nav" data-performance-month="1">›</button></div>';
+  html+='<div class="performance-calendar-weekdays">'+["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(x=>'<span>'+x+'</span>').join("")+'</div><div class="performance-calendar-grid">';
+  for(let d=new Date(first);d<=last;d=addDays(d,1)){
+    const iso=isoDateLocal(d),outside=d.getMonth()!==cursor.getMonth(),future=d>new Date();
+    const isSelected=selected.has(iso);
+    html+='<button type="button" class="performance-day '+(outside?"outside ":"")+(isSelected?"selected ":"")+(future?"future":"")+'" data-performance-date="'+iso+'" '+(future?"disabled":"")+'><span>'+d.getDate()+'</span></button>';
+  }
+  return html+'</div>';
+}
+function performancePeriod(){
+  if(performanceState.mode==="month"){
+    return {start:monthStartDate(performanceState.monthStart),end:monthEndDate(performanceState.monthStart),label:"Performance du "+monthLabel(performanceState.monthStart)};
+  }
+  if(performanceState.mode==="week"){
+    const start=weekStartDate(performanceState.monthStart);return {start,end:addDays(start,6),label:"Performance de la semaine"};
+  }
+  const dates=performanceState.selectedDates.length?performanceState.selectedDates:[isoDateLocal(new Date())];
+  const p=dates.map(parseIsoDate).sort((a,b)=>a-b);return {start:p[0],end:p[p.length-1],label:"Performance sur "+dates.length+" journée"+(dates.length>1?"s":"")};
+}
+async function setPerformanceMode(mode){
+  performanceState.mode=mode;
+  if(mode==="days"&&!performanceState.selectedDates.length)performanceState.selectedDates=[isoDateLocal(new Date())];
+  await loadPerformance();
+  renderDashboard();
+}
+async function changePerformanceMonth(delta){
+  performanceState.monthStart=new Date(performanceState.monthStart.getFullYear(),performanceState.monthStart.getMonth()+Number(delta),1);
+  if(performanceState.mode==="days"){performanceState.selectedDates=[];performanceState.rangeStart=null;}
+  await loadPerformance(); renderDashboard();
+}
+function datesBetweenInclusive(startIso,endIso){
+  const start=parseIsoDate(startIso), end=parseIsoDate(endIso);
+  const a=start<=end?start:end, b=start<=end?end:start;
+  const dates=[];
+  for(let d=new Date(a);d<=b;d=addDays(d,1)) dates.push(isoDateLocal(d));
+  return dates;
+}
+async function togglePerformanceDate(iso){
+  if(performanceState.mode!=="days")performanceState.mode="days";
+  if(!performanceState.rangeStart){
+    performanceState.rangeStart=iso;
+    performanceState.selectedDates=[iso];
+  }else{
+    performanceState.selectedDates=datesBetweenInclusive(performanceState.rangeStart,iso);
+    performanceState.rangeStart=null;
+  }
+  await loadPerformance(); renderDashboard();
+}
+
+function establishmentById(id){return data.establishments.find(e=>e.id===id)||null;}
+function selectedEstablishment(){return establishmentById(state.selectedEstablishmentId);}
+function userEstablishmentIds(userId){
+  return data.userEstablishmentAccess.filter(x=>x.user_id===userId).map(x=>x.establishment_id);
+}
+function establishmentLabel(){
+  const selected=selectedEstablishment();
+  if(selected)return selected.name;
+  return data.establishments.length>1?"Tous les restaurants":(data.establishments[0]?.name||"Aucun magasin");
+}
+function setEstablishmentContext(id){
+  state.selectedEstablishmentId=id||"";
+  performanceState.establishmentId=state.selectedEstablishmentId;
+  localStorage.setItem("cosy-establishment-id",state.selectedEstablishmentId);
+  const menu=$("#establishmentMenu");
+  const current=$("#establishmentCurrent");
+  if(menu)menu.hidden=true;
+  if(current)current.setAttribute("aria-expanded","false");
+  renderEstablishmentSwitcher();
+  render();
+}
+function visibleUsersForSelectedEstablishment(){
+  if(!state.selectedEstablishmentId)return data.users;
+  return data.users.filter(u=>userEstablishmentIds(u.id).includes(state.selectedEstablishmentId));
+}
+function renderEstablishmentSwitcher(){
+  const current=$("#establishmentCurrent");
+  const menu=$("#establishmentMenu");
+  if(!current||!menu)return;
+  current.innerHTML='<strong>PIZZA COSY</strong><small>Espace d\'équipe · '+esc(establishmentLabel())+'</small><span class="establishment-chevron">⌄</span>';
+  current.setAttribute("aria-expanded","false");
+  const groups={};
+  data.establishments.forEach(e=>(groups[e.group_name||"Restaurants"]??=[]).push(e));
+  let html="";
+  if(data.establishments.length>1){
+    html+='<button type="button" class="establishment-option '+(!state.selectedEstablishmentId?"active":"")+'" data-establishment-select=""><span>'+(!state.selectedEstablishmentId?"✓":"")+'</span><strong>Tous les restaurants</strong></button>';
+  }
+  Object.keys(groups).forEach(group=>{
+    html+='<div class="establishment-group">'+esc(group)+'</div>';
+    html+=groups[group].map(e=>'<button type="button" class="establishment-option '+(state.selectedEstablishmentId===e.id?"active":"")+'" data-establishment-select="'+esc(e.id)+'"><span>'+(state.selectedEstablishmentId===e.id?"✓":"")+'</span>'+esc(e.name)+'</button>').join("");
+  });
+  menu.innerHTML=html;
+}
 function taskCard(t){
   const l=late(t.due);
   return '<div class="row task-row '+(t.done?"task-done":"")+'"><input class="check" type="checkbox" data-action="toggle-task" data-id="'+esc(t.id)+'" '+(t.done?"checked":"")+'>'+
@@ -84,18 +330,154 @@ function taskCard(t){
 }
 
 function renderDashboard(){
- const open=data.tasks.filter(t=>!t.done),lateCount=open.filter(t=>late(t.due)>0).length;
- content.innerHTML='<div class="grid"><div class="card"><div class="stat-label">Tâches ouvertes</div><div class="stat-value">'+open.length+'</div><div class="stat-note">'+lateCount+' en retard</div></div>'+
- '<div class="card"><div class="stat-label">Besoins en cours</div><div class="stat-value">'+data.requests.filter(r=>r.status!=="closed").length+'</div><div class="stat-note">Demandes enregistrées</div></div>'+
- '<div class="card"><div class="stat-label">Fiches techniques</div><div class="stat-value">'+data.documents.length+'</div><div class="stat-note">Documents enregistrés</div></div>'+
- '<div class="card"><div class="stat-label">Rapport hebdo</div><div class="stat-value">'+(data.reports[0]?.week_label||"—")+'</div><div class="stat-note">'+(data.reports.length?"Dernier rapport":"À compléter")+'</div></div></div>'+
- '<div class="section-title"><h2>Mes prochaines tâches</h2><button class="btn" data-view="tasks">Voir tout</button></div>'+
- '<div class="list">'+open.slice(0,3).map(taskCard).join("")+'</div>';
-}
+  const period=performancePeriod();
+  const monthlyMode=performanceState.mode==="month"&&data.monthlyPerformance.length>0;
+  const visibleEstablishments=performanceState.establishmentId?data.establishments.filter(e=>e.id===performanceState.establishmentId):data.establishments;
+  const monthlyRows=visibleEstablishments.map(store=>({store,metrics:data.monthlyPerformance.find(r=>r.establishment_id===store.id)||{}})).filter(x=>x.metrics.revenue_ttc!=null);
+  const filteredDailyPerformance=performanceState.establishmentId?data.performance.filter(r=>r.establishment_id===performanceState.establishmentId):data.performance;
 
+  const total=monthlyMode?monthlyRows.reduce((a,x)=>{
+    const m=x.metrics;
+    a.revenue_ttc+=Number(m.revenue_ttc||0); a.revenue_target+=Number(m.revenue_target||0);
+    a.revenue_on_site+=Number(m.revenue_on_site||0); a.revenue_takeaway+=Number(m.revenue_takeaway||0);
+    a.revenue_delivery+=Number(m.revenue_delivery||0); a.revenue_click_collect+=Number(m.revenue_click_collect||0);
+    a.review_count+=Number(m.review_count||0);
+    a.satisfactionSum+=Number(m.satisfaction_pct||0)*Number(m.review_count||0);
+    a.npsSum+=Number(m.nps_pct||0)*Number(m.review_count||0);
+    a.ratingSum+=Number(m.average_rating||0)*Number(m.review_count||0);
+    a.reviewWeight+=Number(m.review_count||0);
+    a.ticketNumerator+=Number(m.revenue_ttc||0);
+    a.ticketDenominator+=Number(m.revenue_ttc||0)/Math.max(Number(m.average_ticket||0),0.01);
+    a.coverNumerator+=Number(m.revenue_on_site||0);
+    a.coverDenominator+=Number(m.revenue_on_site||0)/Math.max(Number(m.average_cover||0),0.01);
+    return a;
+  },{revenue_ttc:0,revenue_target:0,revenue_on_site:0,revenue_takeaway:0,revenue_delivery:0,revenue_click_collect:0,review_count:0,satisfactionSum:0,npsSum:0,ratingSum:0,reviewWeight:0,ticketNumerator:0,ticketDenominator:0,coverNumerator:0,coverDenominator:0}):aggregatePerformance(filteredDailyPerformance);
+
+  if(monthlyMode){
+    total.average_ticket=total.ticketDenominator?total.ticketNumerator/total.ticketDenominator:null;
+    total.average_cover=total.coverDenominator?total.coverNumerator/total.coverDenominator:null;
+    total.average_rating=total.reviewWeight?total.ratingSum/total.reviewWeight:null;
+    total.satisfaction_pct=total.reviewWeight?total.satisfactionSum/total.reviewWeight:null;
+    total.nps_pct=total.reviewWeight?total.npsSum/total.reviewWeight:null;
+    total.target_pct=total.revenue_target?total.revenue_ttc/total.revenue_target*100:null;
+  }
+
+  const progress=total.target_pct;
+  const todayDate=new Date();
+  const elapsedEnd=period.end>todayDate?todayDate:period.end;
+  const daysElapsed=Math.max(1,Math.floor((elapsedEnd-period.start)/86400000)+1);
+  const periodDays=Math.max(1,Math.floor((period.end-period.start)/86400000)+1);
+  const modeButton=(label,value)=>'<button type="button" class="performance-mode '+(performanceState.mode===value?"active":"")+'" data-performance-mode="'+value+'">'+label+'</button>';
+
+  const rowsForStore=(store)=>{
+    if(monthlyMode){
+      return data.monthlyPerformance.find(r=>r.establishment_id===store.id)||{};
+    }
+    return aggregatePerformance(filteredDailyPerformance.filter(r=>r.establishment_id===store.id));
+  };
+
+  const storeRows=visibleEstablishments.map(store=>{
+    const m=rowsForStore(store);
+    const target=monthlyMode?Number(m.revenue_target||0):Number(m.revenue_target||0);
+    const actual=Number(m.revenue_ttc||0);
+    const targetPct=target?actual/target*100:null;
+    const rating=monthlyMode?m.average_rating:m.latest_rating;
+    return '<div class="performance-store-row"><div class="performance-store-name"><strong>'+esc(store.name)+'</strong><span>'+esc(store.code||"")+'</span></div>'+
+      '<div>'+money(actual)+'</div><div>'+(target?money(target):"—")+'</div><div>'+pct(targetPct)+'</div>'+
+      '<div>'+numberFr(monthlyMode?m.review_count||0:m.clients||0)+'</div>'+
+      '<div>'+(m.average_ticket==null?"—":money(m.average_ticket))+'</div>'+
+      '<div>'+(rating==null?"—":Number(rating).toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:2}))+'</div></div>';
+  }).join("");
+
+  const objectiveRows=visibleEstablishments.map(store=>{
+    const m=rowsForStore(store), actual=Number(m.revenue_ttc||0), target=Number(m.revenue_target||0);
+    return '<div class="performance-store-row"><div class="performance-store-name"><strong>'+esc(store.name)+'</strong></div><div>'+money(actual)+'</div><div>'+(target?money(target):"—")+'</div><div>'+pct(target?actual/target*100:null)+'</div></div>';
+  }).join("");
+
+  const rankingRows=visibleEstablishments.map(store=>{
+    const m=rowsForStore(store);
+    return {store,m,ca:Number(m.revenue_ttc||0)};
+  }).sort((a,b)=>b.ca-a.ca).map((x,i)=>
+    '<div class="performance-ranking-row"><div>'+(i+1)+'</div><div class="performance-store-name"><strong>'+esc(x.store.name)+'</strong></div><div>'+money(x.ca)+'</div><div>'+pct(x.m.revenue_target?x.ca/Number(x.m.revenue_target)*100:null)+'</div></div>'
+  ).join("");
+
+  const activityRows=visibleEstablishments.map(store=>{
+    const m=rowsForStore(store);
+    return '<div class="performance-activity-row"><div class="performance-store-name"><strong>'+esc(store.name)+'</strong></div><div>'+(m.average_cover==null?"—":money(m.average_cover))+'</div><div>'+(m.average_ticket==null?"—":money(m.average_ticket))+'</div><div>'+money(m.revenue_on_site||0)+'</div><div>'+money(m.revenue_takeaway||0)+'</div><div>'+money(m.revenue_delivery||0)+'</div></div>';
+  }).join("");
+
+  const satisfactionRows=visibleEstablishments.map(store=>{
+    const m=rowsForStore(store);
+    const rating=monthlyMode?m.average_rating:m.latest_rating;
+    const reviews=monthlyMode?m.review_count:m.latest_reviews;
+    const satisfaction=monthlyMode?m.satisfaction_pct:null;
+    const nps=monthlyMode?m.nps_pct:null;
+    return '<div class="performance-satisfaction-row"><div class="performance-store-name"><strong>'+esc(store.name)+'</strong></div><div>'+(rating==null?"—":Number(rating).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}))+'</div><div>'+numberFr(reviews||0)+'</div><div>'+pct(satisfaction)+'</div><div>'+pct(nps)+'</div></div>';
+  }).join("");
+
+  const modeData=[["Sur place",total.revenue_on_site],["À emporter",total.revenue_takeaway],["Livraison",total.revenue_delivery]];
+  const modeCards=modeData.map(([label,value])=>'<div class="card performance-card"><div class="stat-label">'+label+'</div><div class="stat-value">'+money(value)+'</div><div class="stat-note">'+(total.revenue_ttc?pct(Number(value||0)/total.revenue_ttc*100):"—")+' du CA</div></div>').join("");
+
+  const dailyByWeek={};
+  [...filteredDailyPerformance].sort((a,b)=>a.performance_date.localeCompare(b.performance_date)).forEach(r=>{
+    const weekStart=weekStartDate(parseIsoDate(r.performance_date));
+    const weekKey=isoDateLocal(weekStart);
+    (dailyByWeek[weekKey]??=[]).push(r);
+  });
+  const dailyRows=Object.keys(dailyByWeek).sort().map(weekKey=>{
+    const weekRows=dailyByWeek[weekKey].sort((a,b)=>a.performance_date.localeCompare(b.performance_date));
+    const weekStart=parseIsoDate(weekKey), weekEnd=addDays(weekStart,6);
+    const weekTotal=aggregatePerformance(weekRows);
+    return '<div class="performance-week-block">'+
+      '<div class="performance-week-title"><strong>Semaine du '+rangeLabel(weekStart,weekEnd)+'</strong><span>'+money(weekTotal.revenue_ttc)+' de CA</span></div>'+
+      '<div class="performance-daily-week-table">'+
+        weekRows.map(r=>'<div class="performance-daily-row"><div>'+dateLabel(r.performance_date)+'</div><div>'+esc(r.establishment_name)+'</div><div>'+money(r.revenue_ttc)+'</div><div>'+numberFr(r.clients)+'</div><div>'+numberFr(r.orders)+'</div><div>'+(r.average_ticket==null?"—":money(r.average_ticket))+'</div></div>').join("")+
+      '</div></div>';
+  }).join("");
+
+  content.innerHTML=
+    '<div class="performance-head"><div><div class="eyebrow">RÉSEAU · 7 BOUTIQUES</div><h2>'+esc(period.label)+'</h2><div class="muted">'+esc(rangeLabel(period.start,period.end))+'</div></div></div>'+
+    '<div class="performance-toolbar"><div class="performance-modes">'+modeButton("Mois","month")+modeButton("Semaine","week")+modeButton("Journées","days")+'</div><div class="performance-calendar-wrap">'+calendarHtml()+'</div></div>'+
+    (performanceState.mode==="days"?'<div class="performance-selection">'+(performanceState.selectedDates.length?performanceState.selectedDates.length+" journée"+(performanceState.selectedDates.length>1?"s":"")+" sélectionnée"+(performanceState.selectedDates.length>1?"s":""):"Sélectionnez une ou plusieurs journées")+'</div>':"")+
+    '<div class="performance-cards">'+
+      '<div class="card performance-card"><div class="stat-label">CA réalisé</div><div class="stat-value">'+money(total.revenue_ttc)+'</div><div class="stat-note">'+(total.revenue_target?pct(progress)+" de l’objectif":"Objectif non renseigné")+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Objectif</div><div class="stat-value">'+(total.revenue_target?money(total.revenue_target):"—")+'</div><div class="stat-note">'+(monthlyMode?daysElapsed+" / "+periodDays+" jours écoulés":"Période sélectionnée")+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Ticket moyen</div><div class="stat-value">'+(total.average_ticket==null?"—":money(total.average_ticket))+'</div><div class="stat-note">CA / tickets</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Couvert moyen</div><div class="stat-value">'+(total.average_cover==null?"—":money(total.average_cover))+'</div><div class="stat-note">Sur place</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Avis clients</div><div class="stat-value">'+numberFr(monthlyMode?total.review_count:(total.latest_reviews||0))+'</div><div class="stat-note">réseau</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Note moyenne</div><div class="stat-value">'+(total.average_rating!=null?Number(total.average_rating).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}):"—")+'</div><div class="stat-note">'+(total.satisfaction_pct!=null?pct(total.satisfaction_pct)+" satisfaits":"—")+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Satisfaction</div><div class="stat-value">'+(total.satisfaction_pct!=null?pct(total.satisfaction_pct):"—")+'</div><div class="stat-note">notes ≥ 4</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">NPS</div><div class="stat-value">'+(total.nps_pct!=null?pct(total.nps_pct):"—")+'</div><div class="stat-note">réseau</div></div>'+
+    '</div>'+
+
+    '<div class="section-title"><div><h2>Avancement objectif mensuel</h2><div class="muted">Toujours visible sur la page d’accueil.</div></div></div>'+
+    '<div class="performance-table"><div class="performance-store-header"><div>Restaurant</div><div>CA réalisé</div><div>Objectif</div><div>Réalisation</div><div>Indicateur</div><div>Ticket</div><div>Note</div></div>'+objectiveRows+'</div>'+
+
+    '<div class="section-title"><div><h2>Classement des 7 boutiques</h2><div class="muted">Classement CA de la période affichée.</div></div></div>'+
+    '<div class="performance-ranking-table"><div class="performance-ranking-header"><div>Rang</div><div>Restaurant</div><div>CA</div><div>% objectif</div></div>'+rankingRows+'</div>'+
+
+    '<div class="section-title"><div><h2>Activité · couverts, couvert moyen et ticket moyen</h2><div class="muted">Données disponibles pour chaque boutique.</div></div></div>'+
+    '<div class="performance-activity-table"><div class="performance-activity-header"><div>Restaurant</div><div>Couvert moyen</div><div>Ticket moyen</div><div>Sur place</div><div>À emporter</div><div>Livraison</div></div>'+activityRows+'</div>'+
+
+    '<div class="section-title"><div><h2>Satisfaction client</h2><div class="muted">Toutes les boutiques, toujours présentes.</div></div></div>'+
+    '<div class="performance-satisfaction-table"><div class="performance-satisfaction-header"><div>Restaurant</div><div>Note</div><div>Nb avis</div><div>Satisfaction</div><div>NPS</div></div>'+satisfactionRows+'</div>'+
+
+    '<div class="section-title"><div><h2>Prévisionnel · semaines suivantes</h2><div class="muted">Tableau réservé aux prévisions alimentées par Make/DVORE.</div></div></div>'+
+    '<div class="performance-forecast-table"><div class="performance-forecast-header"><div>Restaurant</div><div>Semaine en cours</div><div>S+1</div></div>'+
+      visibleEstablishments.map(store=>'<div class="performance-forecast-row"><div class="performance-store-name"><strong>'+esc(store.name)+'</strong></div><div>—</div><div>—</div></div>').join("")+
+      '<div class="performance-forecast-row group"><div><strong>GROUPE</strong></div><div>—</div><div>—</div></div></div>'+
+
+    '<div class="section-title"><div><h2>Répartition du CA par mode de consommation</h2><div class="muted">Toujours visible sur la page d’accueil.</div></div></div>'+
+    '<div class="performance-cards performance-mode-cards">'+modeCards+'</div>'+
+
+    '<div class="section-title"><div><h2>Détail des journées</h2><div class="muted">Les données restent journalières pour les vues semaine et journées.</div></div></div>'+
+    '<div class="performance-daily-table"><div class="performance-daily-header"><div>Journée</div><div>Boutique</div><div>CA</div><div>Clients</div><div>Commandes</div><div>Ticket</div></div>'+
+      (filteredDailyPerformance.length?dailyRows:'<div class="empty">Aucune donnée DVORE importée pour cette période.</div>')+'</div>';
+}
 function renderDocuments(){
- content.innerHTML='<div class="section-title"><h2>Fiches techniques</h2>'+(can("document")?'<button class="btn" data-modal="document">+ Ajouter</button>':"")+'</div>'+
- '<div class="list">'+(data.documents.length?data.documents.map(d=>'<div class="row doc-preview"><div class="pdf-icon">PDF</div><div class="doc-info"><strong>'+esc(d.title)+'</strong><div class="muted">Version '+esc(d.version)+' · '+esc(d.file_name)+'</div></div><button class="preview-btn" data-preview="'+esc(d.id)+'">Prévisualiser</button>'+(can("document")?'<div class="doc-menu-wrap"><button class="doc-menu-btn" type="button" data-doc-menu="'+esc(d.id)+'" aria-label="Options">⋯</button><div class="doc-menu" data-menu-for="'+esc(d.id)+'" hidden><button type="button" data-doc-edit="'+esc(d.id)+'">Modifier</button><button type="button" class="danger" data-doc-delete="'+esc(d.id)+'">Supprimer</button></div></div>':"")+'</div>').join(""):'<div class="empty">Aucune fiche technique.</div>')+'</div>';
+ const reorderable=can("document");
+ content.innerHTML='<div class="section-title"><div><h2>Fiches techniques</h2>'+(reorderable?'<div class="muted">Glissez-déposez les fiches pour modifier leur ordre.</div>':"")+"</div>"+(reorderable?'<button class="btn" data-modal="document">+ Ajouter</button>':"")+"</div>"+
+ '<div class="list document-list">'+(data.documents.length?data.documents.map(d=>'<div class="row doc-preview" data-doc-row="'+esc(d.id)+'" '+(reorderable?'draggable="true"':"")+'><div class="doc-drag-handle" aria-hidden="true">⋮⋮</div><div class="pdf-icon">PDF</div><div class="doc-info"><strong>'+esc(d.title)+'</strong><div class="muted">Version '+esc(d.version)+' · '+esc(d.file_name)+'</div></div><button class="preview-btn" data-preview="'+esc(d.id)+'">Prévisualiser</button>'+(reorderable?'<div class="doc-menu-wrap"><button class="doc-menu-btn" type="button" data-doc-menu="'+esc(d.id)+'" aria-label="Options">⋯</button><div class="doc-menu" data-menu-for="'+esc(d.id)+'" hidden><button type="button" data-doc-edit="'+esc(d.id)+'">Modifier</button><button type="button" class="danger" data-doc-delete="'+esc(d.id)+'">Supprimer</button></div></div>':"")+'</div>').join(""):'<div class="empty">Aucune fiche technique.</div>')+'</div>';
 }
 
 function renderTasks(){
@@ -114,6 +496,88 @@ function renderRequests(){
  content.innerHTML='<div class="section-title"><h2>Besoins & interventions</h2><button class="btn" data-modal="request">+ Nouveau besoin</button></div>'+
  '<div class="list">'+(data.requests.length?data.requests.map(r=>'<div class="row"><div><strong>'+esc(r.title)+'</strong><div class="muted">'+esc(r.kind)+' · '+esc(priorityLabel(r.priority))+'</div></div><span class="tag">'+esc(r.status)+'</span></div>').join(""):'<div class="empty">Aucune demande.</div>')+'</div>';
 }
+function renderAccess(){
+  if(state.role!=="admin"){content.innerHTML='<div class="empty">Cette rubrique est réservée aux administrateurs.</div>';return;}
+  const users=visibleUsersForSelectedEstablishment();
+  const filterLabel=establishmentLabel();
+  content.innerHTML='<div class="section-title"><div><h2>Accès</h2><div class="muted">Membres autorisés — '+esc(filterLabel)+'</div></div><button class="btn" data-user-add>+ Ajouter un accès</button></div>'+
+  '<div class="list access-list">'+(users.length?users.map(u=>{
+    const ids=userEstablishmentIds(u.id);
+    const stores=ids.map(id=>establishmentById(id)?.name).filter(Boolean);
+    const storeLabel=stores.length===data.establishments.length&&data.establishments.length>1?"Tous les restaurants":(stores.join(" · ")||"Aucun magasin");
+    return '<div class="row access-row"><div class="access-person"><div class="settings-avatar">'+esc(initialsForName(u.full_name))+'</div><div><strong>'+esc(displayPersonName(u.full_name)||"Sans nom")+'</strong><div class="muted">'+esc(u.phone||"Téléphone non renseigné")+' · '+esc(u.login_email||"E-mail non renseigné")+'</div><div class="access-stores">'+esc(storeLabel)+'</div></div></div><div class="access-meta"><span class="tag">'+esc(roleText(u.role))+'</span><span class="access-status '+(u.is_active!==false?"active":"inactive")+'">'+(u.is_active!==false?"Actif":"Désactivé")+'</span><button class="btn-secondary" type="button" data-user-edit="'+esc(u.id)+'">Modifier</button></div></div>';
+  }).join(""):'<div class="empty">Aucun membre autorisé dans ce restaurant.</div>')+'</div>';
+}
+
+function openUserModal(user){
+  closeModal();
+  const u=user||{id:"",full_name:"",phone:"",login_email:"",role:"employee",is_active:true};
+  const editing=!!user;
+  const person=splitPersonName(u.full_name);
+  const initials=initialsForName(u.full_name);
+  const assignedIds=new Set(editing?userEstablishmentIds(u.id):(state.selectedEstablishmentId?[state.selectedEstablishmentId]:(data.establishments[0]?.id?[data.establishments[0].id]:[])));
+  const establishmentFields=data.establishments.map(e=>'<label class="establishment-check"><input type="checkbox" name="establishments" value="'+esc(e.id)+'" '+(assignedIds.has(e.id)?"checked":"")+'><span><strong>'+esc(e.name)+'</strong><small>'+esc(e.code||"")+'</small></span></label>').join("");
+  document.body.insertAdjacentHTML("beforeend",'<div id="appModal" class="modal-backdrop user-modal-backdrop"><div class="user-modal-card">'+
+    '<div class="user-modal-head"><div class="user-modal-identity"><div class="user-modal-avatar">'+esc(initials)+'</div><div><span class="user-modal-kicker">ACCÈS ÉQUIPE</span><h3>'+(editing?"Modifier le compte":"Ajouter un accès")+'</h3><p>'+(editing?"Modifiez les informations, le rôle et les magasins autorisés.":"Créez un accès et choisissez les magasins autorisés.")+'</p></div></div><button class="modal-close" data-close aria-label="Fermer">×</button></div>'+
+    '<form id="userAccessForm" class="user-modal-form">'+
+      '<div class="user-form-grid">'+
+        '<label>Prénom<input name="first_name" required value="'+esc(person.firstName)+'" placeholder="Ex. Jean"></label><label>Nom<input name="last_name" required value="'+esc(person.lastName)+'" placeholder="Ex. DUPONT"></label>'+
+        '<label>Numéro de téléphone<input name="phone" type="tel" value="'+esc(u.phone||"")+'" placeholder="06 00 00 00 00"></label>'+
+        '<label class="full-field">E-mail de connexion<input name="login_email" type="email" required value="'+esc(u.login_email||"")+'" '+(editing?"readonly":"")+' placeholder="prenom@exemple.fr"></label>'+
+        '<label>Profil d’accès<select name="role"><option value="employee" '+(u.role==="employee"?"selected":"")+'>Salarié</option><option value="manager" '+(u.role==="manager"?"selected":"")+'>Manager</option><option value="admin" '+(u.role==="admin"?"selected":"")+'>Administrateur</option></select></label>'+
+        '<div class="user-access-state"><span><strong>Compte actif</strong><small>Autorise la connexion à l’espace équipe.</small></span><label class="switch"><input name="is_active" type="checkbox" '+(u.is_active!==false?"checked":"")+'><span class="switch-track"></span></label></div>'+
+      '</div>'+
+      '<div class="establishment-access-box"><div><strong>Magasins autorisés</strong><small>La personne ne verra que les établissements cochés dans son sélecteur.</small></div><div class="establishment-check-grid">'+establishmentFields+'</div></div>'+
+      (editing?'<div class="user-modal-security"><div><strong>Sécurité du compte</strong><small>Le mot de passe peut être réinitialisé par e-mail.</small></div><div class="user-modal-security-actions">'+(u.must_set_password?'<button type="button" class="btn-link" data-resend-invitation="'+esc(u.id)+'">Renvoyer l’invitation</button>':"")+'<button type="button" class="btn-link" data-reset-user="'+esc(u.id)+'">Réinitialiser le mot de passe</button><button type="button" class="btn-danger" data-delete-user="'+esc(u.id)+'">Supprimer définitivement</button></div></div>':"")+
+      '<div class="user-modal-footer"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn" type="submit">Enregistrer</button></div><p id="userAccessMessage" class="user-modal-message"></p>'+
+    '</form></div></div>');
+  $("#userAccessForm")?.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const fd=new FormData(e.target);
+    const establishmentIds=[...e.target.querySelectorAll('input[name="establishments"]:checked')].map(x=>x.value);
+    const firstName=String(fd.get("first_name")||"").trim();
+    const lastName=String(fd.get("last_name")||"").trim();
+    const fields={full_name:formatPersonName(firstName,lastName),phone:String(fd.get("phone")||"").trim(),login_email:String(fd.get("login_email")||"").trim(),role:String(fd.get("role")||"employee"),is_active:fd.get("is_active")==="on"};
+    const msg=$("#userAccessMessage");
+    if(!firstName||!lastName){msg.textContent="Prénom et nom sont obligatoires.";return;}
+    if(!establishmentIds.length){msg.textContent="Sélectionnez au moins un magasin.";return;}
+    try{
+      if(!editing){
+        msg.textContent="Création de l’invitation…";
+        const {data:result,error}=await supabase.functions.invoke("invite-user",{body:{full_name:fields.full_name,phone:fields.phone,login_email:fields.login_email,role:fields.role,establishment_ids:establishmentIds}});
+        if(error)throw error;
+        if(result?.error)throw new Error(result.error);
+        const invitedUserId=result?.user_id;
+        if(!invitedUserId)throw new Error("L'utilisateur a été créé mais son identifiant est introuvable.");
+        const {error:accessError}=await supabase.rpc("admin_set_user_establishments",{p_user_id:invitedUserId,p_establishment_ids:establishmentIds});
+        if(accessError)throw accessError;
+        await loadData();render();closeModal();
+        alert("Invitation envoyée à "+fields.login_email+".");
+        return;
+      }
+      const {error}=await supabase.rpc("admin_update_profile",{p_user_id:u.id,p_full_name:fields.full_name,p_phone:fields.phone,p_role:fields.role,p_is_active:fields.is_active});
+      if(error)throw error;
+      const {error:accessError}=await supabase.rpc("admin_set_user_establishments",{p_user_id:u.id,p_establishment_ids:establishmentIds});
+      if(accessError)throw accessError;
+      await loadData();render();closeModal();
+    }catch(err){if(msg)msg.textContent=err.message||"Impossible d’enregistrer.";}
+  });
+}
+function renderSettings(){
+  const p=state.profile||{};
+  const email=state.profile?.email||"";
+  const person=splitPersonName(p.full_name||"Aloïs MONIER"); const initials=initialsForName(p.full_name||"Aloïs MONIER");
+  content.innerHTML='<div class="section-title"><div><h2>Paramètres</h2><div class="muted">Gérez votre profil et les réglages de PIZZA COSY.</div></div></div></div>'+
+  '<div class="settings-grid">'+
+  '<section class="card settings-card"><div class="settings-card-head"><div><div class="stat-label">Profil</div><h3>Mes informations</h3></div><div class="settings-avatar">'+esc(initials)+'</div></div>'+
+  '<form id="profileSettingsForm" class="settings-form"><label>Prénom<input name="first_name" required value="'+esc(person.firstName)+'"></label><label>Nom<input name="last_name" required value="'+esc(person.lastName)+'"></label>'+
+  '<label>Email<input value="'+esc(email||"Non disponible")+'" disabled></label>'+
+  '<label>Rôle<input value="'+esc(roleText(state.role))+'" disabled></label>'+
+  '<button class="btn" type="submit">Enregistrer les modifications</button><p id="profileSettingsMessage" class="muted"></p></form></section><section class="card settings-card"><div class="stat-label">Sécurité</div><h3>Mot de passe</h3><form id="passwordSettingsForm" class="settings-form"><label>Nouveau mot de passe<input name="password" type="password" minlength="6" required placeholder="6 caractères minimum"></label><label>Confirmer<input name="passwordConfirm" type="password" minlength="6" required placeholder="Retapez le mot de passe"></label><button class="btn-secondary" type="submit">Modifier le mot de passe</button><p id="passwordSettingsMessage" class="muted"></p></form></section>'+
+  
+  '<section class="card settings-card settings-danger"><div class="stat-label">Session</div><h3>Compte</h3><p class="muted">Déconnectez-vous de cet appareil. Vous pourrez vous reconnecter avec votre adresse e-mail et votre mot de passe.</p>'+
+  '<button type="button" class="btn-danger" data-logout>Se déconnecter</button></section></div>';
+}
 function renderReports(){
  content.innerHTML='<div class="section-title"><h2>Rapports hebdomadaires</h2>'+(can("report")?'<button class="btn" data-modal="report">+ Nouveau rapport</button>':"")+'</div>'+
  '<div class="list">'+(data.reports.length?data.reports.map(r=>'<div class="row"><div><strong>'+esc(r.week_label)+'</strong><div class="muted">CA '+(r.revenue??"—")+' € · '+(r.clients??"—")+' clients · Note '+(r.rating??"—")+'</div></div></div>').join(""):'<div class="empty">Aucun rapport enregistré.</div>')+'</div>';
@@ -121,19 +585,146 @@ function renderReports(){
 
 function render(){
  pageTitle.textContent=titles[state.view];
- ({dashboard:renderDashboard,documents:renderDocuments,tasks:renderTasks,requests:renderRequests,reports:renderReports}[state.view]||renderDashboard)();
+ ({dashboard:renderDashboard,documents:renderDocuments,access:renderAccess,settings:renderSettings}[state.view]||renderDashboard)();
  $$(".nav-item,.bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===state.view));
  roleLabel.textContent=roleText(state.role);
- roleToggle.textContent=roleText(state.role);
+ if(sidebarUserName)sidebarUserName.textContent=displayPersonName(state.profile?.full_name)||"Mon profil";
 }
-
 function closeModal(){const m=$("#appModal");if(m)m.remove();}
 async function openPreview(id){
- const d=data.documents.find(x=>x.id===id);if(!d)return;
- const {data:url,error}=await supabase.storage.from("team-documents").createSignedUrl(d.storage_path,300);
- if(error){alert("Impossible d’ouvrir le document : "+error.message);return;}
- window.open(url.signedUrl,"_blank","noopener");
+  const d=data.documents.find(x=>x.id===id);if(!d)return;
+  const tab=window.open("about:blank","_blank");
+  if(!tab){alert("Autorisez les fenêtres pop-up pour prévisualiser le document.");return;}
+  const loadingHtml='<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Ouverture — '+esc(d.title)+'</title><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f9f8f4;color:#205040}body{display:grid;place-items:center}.loader{text-align:center;padding:30px;max-width:420px;width:90%}.spinner{width:42px;height:42px;margin:0 auto 20px;border:4px solid #e5e2dc;border-top-color:#205040;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}h1{font-size:18px;margin:0 0 8px}p{font-size:13px;color:#748078;margin:0}</style></head><body><div class="loader"><div class="spinner"></div><h1>Ouverture du PDF…</h1><p>Préparation du document</p></div></body></html>';
+  tab.document.open();tab.document.write(loadingHtml);tab.document.close();
+  try{
+    const {data:url,error}=await supabase.storage.from("team-documents").createSignedUrl(d.storage_path,600);
+    if(error)throw error;
+    if(!url?.signedUrl)throw new Error("Lien sécurisé du document introuvable.");
+    tab.location.replace(url.signedUrl);
+  }catch(err){
+    try{
+      tab.document.body.innerHTML='<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:40px;text-align:center;color:#205040"><h2>Impossible d’ouvrir le document</h2><p style="color:#748078">'+esc(err?.message||"Erreur inconnue")+'</p></div>';
+    }catch(_){}
+  }
 }
+function setUploadProgress(percent,text){
+  const bar=$("#uploadProgressBar"),label=$("#uploadProgressText"),wrap=$("#uploadProgress");
+  if(!wrap)return;
+  wrap.hidden=false;
+  if(bar)bar.style.width=Math.max(0,Math.min(100,percent))+"%";
+  if(label)label.textContent=text||("Téléversement "+Math.round(percent)+" %");
+  const value=wrap.querySelector(".upload-progress-head strong");
+  if(value)value.textContent=Math.round(percent)+" %";
+}
+async function uploadDocumentWithProgress(path,file){
+  const {data:{session},error}=await supabase.auth.getSession();
+  if(error)throw error;
+  if(!session?.access_token)throw new Error("Session Supabase introuvable.");
+  return await new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    const url=window.TEAMHUB_SUPABASE_URL+"/storage/v1/object/team-documents/"+path.split("/").map(encodeURIComponent).join("/");
+    xhr.open("POST",url,true);
+    xhr.setRequestHeader("Authorization","Bearer "+session.access_token);
+    xhr.setRequestHeader("apikey",window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY);
+    xhr.setRequestHeader("Content-Type",file.type||"application/octet-stream");
+    xhr.setRequestHeader("x-upsert","false");
+    xhr.upload.onprogress=e=>{
+      if(e.lengthComputable)setUploadProgress((e.loaded/e.total)*100,"Téléversement… "+Math.round((e.loaded/e.total)*100)+" %");
+    };
+    xhr.onload=()=>{
+      if(xhr.status>=200&&xhr.status<300){
+        setUploadProgress(100,"Téléversement terminé");
+        resolve(true);
+      }else{
+        let msg="Erreur pendant l’upload ("+xhr.status+").";
+        try{const body=JSON.parse(xhr.responseText);msg=body.message||body.error||msg;}catch(_){}
+        reject(new Error(msg));
+      }
+    };
+    xhr.onerror=()=>reject(new Error("Impossible de téléverser le fichier."));
+    xhr.onabort=()=>reject(new Error("Téléversement annulé."));
+    setUploadProgress(0,"Préparation du téléversement…");
+    xhr.send(file);
+  });
+}
+
+let draggingDocumentId=null;
+
+async function persistDocumentOrder(){
+  const base=Date.now();
+  const results=await Promise.all(data.documents.map((d,index)=>
+    supabase.from("documents").update({updated_at:new Date(base-index*1000).toISOString()}).eq("id",d.id)
+  ));
+  for(const result of results)if(result.error)throw result.error;
+}
+
+async function moveDocument(id,targetId){
+  if(!can("document")||!id||id===targetId)return;
+  const from=data.documents.findIndex(d=>d.id===id);
+  const target=data.documents.findIndex(d=>d.id===targetId);
+  if(from<0||target<0)return;
+  const [item]=data.documents.splice(from,1);
+  data.documents.splice(target,0,item);
+  try{
+    await persistDocumentOrder();
+    render();
+  }catch(err){
+    await loadData();
+    render();
+    alert("Impossible d’enregistrer le nouvel ordre : "+(err?.message||"Erreur inconnue"));
+  }
+}
+
+document.addEventListener("dragstart",e=>{
+  const row=e.target.closest("[data-doc-row]");
+  if(!row||!can("document"))return;
+  draggingDocumentId=row.dataset.docRow;
+  row.classList.add("is-dragging");
+  if(e.dataTransfer){
+    e.dataTransfer.effectAllowed="move";
+    e.dataTransfer.setData("text/plain",draggingDocumentId);
+  }
+});
+document.addEventListener("dragover",e=>{
+  const row=e.target.closest("[data-doc-row]");
+  if(!row||!draggingDocumentId||row.dataset.docRow===draggingDocumentId)return;
+  e.preventDefault();
+  document.querySelectorAll("[data-doc-row].drag-over").forEach(x=>x.classList.remove("drag-over"));
+  row.classList.add("drag-over");
+  if(e.dataTransfer)e.dataTransfer.dropEffect="move";
+});
+document.addEventListener("drop",async e=>{
+  const row=e.target.closest("[data-doc-row]");
+  if(!row||!draggingDocumentId)return;
+  e.preventDefault();
+  const targetId=row.dataset.docRow;
+  document.querySelectorAll("[data-doc-row].drag-over").forEach(x=>x.classList.remove("drag-over"));
+  const rect=row.getBoundingClientRect();
+  const insertAfter=e.clientY>rect.top+rect.height/2;
+  const sourceIndex=data.documents.findIndex(d=>d.id===draggingDocumentId);
+  const targetIndex=data.documents.findIndex(d=>d.id===targetId);
+  let adjustedTarget=targetIndex+(insertAfter?1:0);
+  if(sourceIndex<adjustedTarget)adjustedTarget--;
+  const [item]=data.documents.splice(sourceIndex,1);
+  data.documents.splice(Math.max(0,Math.min(data.documents.length,adjustedTarget)),0,item);
+  try{
+    await persistDocumentOrder();
+    render();
+  }catch(err){
+    await loadData();
+    render();
+    alert("Impossible d’enregistrer le nouvel ordre : "+(err?.message||"Erreur inconnue"));
+  }
+  draggingDocumentId=null;
+});
+document.addEventListener("dragend",e=>{
+  const row=e.target.closest("[data-doc-row]");
+  if(row)row.classList.remove("is-dragging");
+  document.querySelectorAll("[data-doc-row].drag-over").forEach(x=>x.classList.remove("drag-over"));
+  draggingDocumentId=null;
+});
+
 async function deleteDocument(id){
  const d=data.documents.find(x=>x.id===id);if(!d)return;
  if(!can("document"))return;
@@ -151,10 +742,11 @@ async function openModal(type){
  if(type==="task")form='<label>Titre<input name="title" required placeholder="Ex. Contrôler les températures"></label><div class="form-grid"><label>Attribuer à<select name="assignee" id="assigneeSelect"></select></label><label>Date<input name="due" type="date" required></label></div><div class="form-grid"><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label><label>Récurrence<select name="repeat"><option>Aucune</option><option>Tous les jours</option><option>Chaque semaine</option><option>Chaque mois</option></select></label></div><label>Note<textarea name="note"></textarea></label>';
  if(type==="document")form='<label>Fichier<input name="file" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required></label><label>Nom<input name="name" required placeholder="Ex. Procédure ouverture"></label><label>Catégorie<select name="category"><option value="technical">Fiche technique</option><option value="procedure">Procédure</option><option value="haccp">Hygiène / HACCP</option><option value="other">Autre</option></select></label>';
  if(type==="document-edit"){const d=data.documents.find(x=>x.id===window.__editDocumentId)||{};form='<label>Nom<input name="name" required value="'+esc(d.title||"")+'"></label><label>Catégorie<select name="category"><option value="technical" '+(d.category==="technical"?"selected":"")+'>Fiche technique</option><option value="procedure" '+(d.category==="procedure"?"selected":"")+'>Procédure</option><option value="haccp" '+(d.category==="haccp"?"selected":"")+'>Hygiène / HACCP</option><option value="other" '+(d.category==="other"?"selected":"")+'>Autre</option></select></label>';
- if(type==="request")form='<label>Objet<input name="title" required></label><div class="form-grid"><label>Type<select name="kind"><option>Maintenance</option><option>Matériel</option><option>Informatique</option><option>Fournisseur</option></select></label><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label></div><label>Description<textarea name="description" required></textarea><label>Pièce jointe<input name="file" type="file"></label>';
+ }
+ if(type==="request")form='<label>Objet<input name="title" required></label><div class="form-grid"><label>Type<select name="kind"><option>Maintenance</option><option>Matériel</option><option>Informatique</option><option>Fournisseur</option></select></label><label>Priorité<select name="priority"><option>Normale</option><option>Haute</option><option>Urgente</option></select></label></div><label>Description<textarea name="description" required></textarea>';
  if(type==="report")form='<label>Semaine<input name="week" required placeholder="S39"></label><div class="form-grid"><label>CA TTC<input name="revenue" type="number" step=".01"></label><label>Clients<input name="clients" type="number"></label></div><div class="form-grid"><label>Ticket moyen<input name="ticket" type="number" step=".01"></label><label>Note<input name="rating" type="number" step=".01"></label></div><label>Commentaires<textarea name="comments"></textarea>';
  const m=document.createElement("div");m.id="appModal";m.className="modal-backdrop";
- m.innerHTML='<div class="modal"><div class="modal-head"><div><div class="eyebrow">Équipe</div><h2>'+names[type]+'</h2></div><button class="modal-close" data-close>×</button></div><form id="modalForm" data-type="'+type+'">'+form+'<div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn">Créer</button></div></form></div>';
+ m.innerHTML='<div class="modal"><div class="modal-head"><div><div class="eyebrow">Équipe</div><h2>'+names[type]+'</h2></div><button class="modal-close" data-close>×</button></div><form id="modalForm" data-type="'+type+'">'+form+'<div id="uploadProgress" class="upload-progress" hidden><div class="upload-progress-head"><span id="uploadProgressText">Préparation du téléversement…</span><strong>0 %</strong></div><div class="upload-progress-track"><div id="uploadProgressBar" class="upload-progress-bar"></div></div></div><div class="modal-actions"><button type="button" class="btn-secondary" data-close>Annuler</button><button class="btn">'+(type==="document-edit"?"Enregistrer":"Créer")+'</button></div></form></div>';
  document.body.appendChild(m);
  if(type==="task"){
    const {data:people}=await supabase.from("profiles").select("id,full_name").eq("active",true).order("full_name");
@@ -163,16 +755,51 @@ async function openModal(type){
  m.querySelector("input,select,textarea")?.focus();
 }
 
+document.addEventListener("change",async e=>{if(e.target?.id==="performanceEstablishmentFilter"){performanceState.establishmentId=e.target.value||"";renderDashboard();}});
 document.addEventListener("click",async e=>{
  const close=e.target.closest("[data-close]");if(close){closeModal();return;}
- const nav=e.target.closest("[data-view]");if(nav){state.view=nav.dataset.view;render();return;}
- const modal=e.target.closest("[data-modal]");if(modal){openModal(modal.dataset.modal);return;}
+ const nav=e.target.closest("[data-view]");if(nav){state.view=nav.dataset.view;document.body.classList.remove("mobile-nav-open");const mm=document.querySelector("[data-mobile-menu]");if(mm)mm.setAttribute("aria-expanded","false");render();return;}
+ const establishmentCurrent=e.target.closest("[data-establishment-menu]");if(establishmentCurrent){const menu=$("#establishmentMenu");if(menu){const opening=menu.hidden;menu.hidden=!opening;establishmentCurrent.setAttribute("aria-expanded",String(opening));}return;}
+ const establishmentSelect=e.target.closest("[data-establishment-select]");if(establishmentSelect){setEstablishmentContext(establishmentSelect.dataset.establishmentSelect||"");return;}
+ const mobileMenu=e.target.closest("[data-mobile-menu]");if(mobileMenu){const open=!document.body.classList.contains("mobile-nav-open");document.body.classList.toggle("mobile-nav-open",open);mobileMenu.setAttribute("aria-expanded",String(open));return;}
+ const mobileClose=e.target.closest("[data-mobile-menu-close]");if(mobileClose){document.body.classList.remove("mobile-nav-open");const mm=document.querySelector("[data-mobile-menu]");if(mm)mm.setAttribute("aria-expanded","false");return;}
+ const userAdd=e.target.closest("[data-user-add]");if(userAdd){openUserModal(null);return;}
+ const userEdit=e.target.closest("[data-user-edit]");if(userEdit){openUserModal(data.users.find(u=>u.id===userEdit.dataset.userEdit));return;}
+ const resendInvitation=e.target.closest("[data-resend-invitation]");if(resendInvitation){const u=data.users.find(x=>x.id===resendInvitation.dataset.resendInvitation);if(!u)return;if(!confirm("Renvoyer l’invitation à "+(u.login_email||"cet utilisateur")+" ?"))return;resendInvitation.disabled=true;try{const {data:result,error}=await supabase.functions.invoke("resend-invitation",{body:{user_id:u.id}});if(error)throw error;if(result?.error)throw new Error(result.error);alert("Invitation renvoyée.");}catch(err){alert(err?.message||"Impossible de renvoyer l’invitation.");}finally{resendInvitation.disabled=false;}return;}
+ const resetUser=e.target.closest("[data-reset-user]");if(resetUser){const u=data.users.find(x=>x.id===resetUser.dataset.resetUser);if(u?.login_email){const {error}=await supabase.auth.resetPasswordForEmail(u.login_email,{redirectTo:window.location.origin+window.location.pathname});alert(error?error.message:"Lien de réinitialisation envoyé.");}return;}
+ const deleteUser=e.target.closest("[data-delete-user]");if(deleteUser){
+   const u=data.users.find(x=>x.id===deleteUser.dataset.deleteUser);
+   if(!u)return;
+   if(!confirm('Supprimer définitivement le compte de « '+(u.full_name||u.login_email||"cet utilisateur")+' ?\\n\\nLe compte ne pourra plus se connecter. Cette action est irréversible.'))return;
+   deleteUser.disabled=true;
+   try{
+     const {data:result,error}=await supabase.functions.invoke("delete-user",{body:{user_id:u.id}});
+     if(error)throw error;
+     if(result?.error)throw new Error(result.error);
+     closeModal();await loadData();render();
+     alert("Compte supprimé.");
+   }catch(err){deleteUser.disabled=false;alert(err.message||"Impossible de supprimer le compte.");}
+   return;
+ }
+ const modal=e.target.closest("[data-modal]");if(modal){openModal(modal.dataset.modal).catch(err=>alert("Impossible d’ouvrir le formulaire : "+(err?.message||"Erreur inconnue")));return;}
+
+ const performanceMode=e.target.closest("[data-performance-mode]");
+ if(performanceMode){setPerformanceMode(performanceMode.dataset.performanceMode).catch(err=>alert(err?.message||"Impossible de charger les performances."));return;}
+ const performanceMonth=e.target.closest("[data-performance-month]");
+ if(performanceMonth){changePerformanceMonth(performanceMonth.dataset.performanceMonth).catch(err=>alert(err?.message||"Impossible de changer de mois."));return;}
+ const performanceDate=e.target.closest("[data-performance-date]");
+ if(performanceDate&&!performanceDate.disabled){togglePerformanceDate(performanceDate.dataset.performanceDate).catch(err=>alert(err?.message||"Impossible de charger la journée."));return;}
+
  const filter=e.target.closest("[data-filter]");if(filter){state.taskFilter=filter.dataset.filter;renderTasks();return;}
  const preview=e.target.closest("[data-preview]");if(preview){await openPreview(preview.dataset.preview);return;}
  const menu=e.target.closest("[data-doc-menu]");if(menu){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);const box=document.querySelector('[data-menu-for="'+menu.dataset.docMenu+'"]');if(box)box.hidden=false;return;}
  const edit=e.target.closest("[data-doc-edit]");if(edit){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);window.__editDocumentId=edit.dataset.docEdit;openModal("document-edit");return;}
  const del=e.target.closest("[data-doc-delete]");if(del){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);await deleteDocument(del.dataset.docDelete);return;}
 });
+document.addEventListener("click",e=>{
+  if(!e.target.closest(".doc-menu-wrap"))document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);
+},true);
+
 document.addEventListener("change",async e=>{
  if(e.target.matches('[data-action="toggle-task"]')){
    const id=e.target.dataset.id,done=e.target.checked;
@@ -181,8 +808,20 @@ document.addEventListener("change",async e=>{
    await loadData();render();
  }
 });
+document.addEventListener("click",async e=>{
+  const logout=e.target.closest("[data-logout]");
+  if(logout){
+    if(!confirm("Se déconnecter de CosyHub ?"))return;
+    logout.disabled=true;
+    const {error}=await supabase.auth.signOut();
+    if(error){logout.disabled=false;alert("Impossible de se déconnecter : "+error.message);return;}
+    state.profile=null;state.role="employee";data.tasks=[];data.documents=[];data.requests=[];data.reports=[];
+    showAuth(true);
+    return;
+  }
+});
 document.addEventListener("submit",async e=>{
- if(e.target.id!=="modalForm")return;
+ if(e.target.id==="profileSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const name=formatPersonName(String(fd.get("first_name")||"").trim(),String(fd.get("last_name")||"").trim()); if(!name)return; const {error}=await supabase.rpc("update_my_profile",{p_full_name:name,p_phone:state.profile.phone||""}); const msg=$("#profileSettingsMessage"); if(error){if(msg)msg.textContent=error.message;return;} state.profile.full_name=name; if(sidebarUserName)sidebarUserName.textContent=name; if(msg)msg.textContent="Profil enregistré."; return;} if(e.target.id==="passwordSettingsForm"){e.preventDefault(); const fd=new FormData(e.target); const p=String(fd.get("password")||""); const pc=String(fd.get("passwordConfirm")||""); const msg=$("#passwordSettingsMessage"); if(p!==pc){if(msg)msg.textContent="Les deux mots de passe sont différents.";return;} const {error}=await supabase.auth.updateUser({password:p}); if(msg)msg.textContent=error?error.message:"Mot de passe modifié."; if(!error)e.target.reset(); return;} if(e.target.id!=="modalForm")return;
  e.preventDefault();
  const f=e.target,fd=new FormData(f),type=f.dataset.type,est=state.profile.establishment_id,user=(await supabase.auth.getUser()).data.user;
  try{
@@ -191,14 +830,26 @@ document.addEventListener("submit",async e=>{
      if(error)throw error;state.view="tasks";
    }
    if(type==="document"){
-     const file=fd.get("file");const id=crypto.randomUUID();const path=est+"/"+id+"/"+file.name;
-     const up=await supabase.storage.from("team-documents").upload(path,file,{upsert:false});
-     if(up.error)throw up.error;
+     const file=fd.get("file");
+     if(!file||!file.size)throw new Error("Sélectionnez un fichier.");
+     const id=crypto.randomUUID();
+     const path=est+"/"+id+"/"+file.name;
+     const submit=f.querySelector('button[type="submit"]');
+     const cancel=f.querySelector('[data-close]');
+     if(submit)submit.disabled=true;
+     if(cancel)cancel.disabled=true;
+     setUploadProgress(0,"Préparation du téléversement…");
+     await uploadDocumentWithProgress(path,file);
+     setUploadProgress(100,"Enregistrement de la fiche…");
      const {error}=await supabase.from("documents").insert({id,establishment_id:est,title:fd.get("name"),category:fd.get("category"),storage_path:path,file_name:file.name,uploaded_by:user.id});
-     if(error)throw error;state.view="documents";
+     if(error){
+       await supabase.storage.from("team-documents").remove([path]);
+       throw error;
+     }
+     state.view="documents";
    }
    if(type==="document-edit"){
-     const id=window.__editDocumentId;const {error}=await supabase.from("documents").update({title:fd.get("name"),category:fd.get("category"),updated_at:new Date().toISOString()}).eq("id",id);
+     const id=window.__editDocumentId;const {error}=await supabase.from("documents").update({title:fd.get("name"),category:fd.get("category")}).eq("id",id);
      if(error)throw error;window.__editDocumentId=null;state.view="documents";
    }
    if(type==="request"){
@@ -213,20 +864,46 @@ document.addEventListener("submit",async e=>{
  }catch(err){alert(err.message||"Impossible d’enregistrer.");}
 });
 
-roleToggle?.addEventListener("click",()=>authLogout?.click());
-const savedTheme=localStorage.getItem("teamhub-theme");if(savedTheme==="dark")document.body.classList.add("dark");
-function updateThemeButton(){const dark=document.body.classList.contains("dark");themeToggle?.setAttribute("aria-pressed",String(dark));themeToggle?.setAttribute("aria-label",dark?"Désactiver le mode sombre":"Activer le mode sombre");}
-themeToggle?.addEventListener("click",()=>{const dark=document.body.classList.toggle("dark");localStorage.setItem("teamhub-theme",dark?"dark":"light");updateThemeButton();});
+
+document.body.classList.remove("dark");localStorage.removeItem("teamhub-theme");
 
 let booting=false;
+
+function openFirstLoginModal(){
+  if(document.getElementById("firstLoginModal"))return;
+  const p=state.profile||{};
+    const person=splitPersonName(p.full_name);
+  document.body.insertAdjacentHTML("beforeend",'<div id="firstLoginModal" class="modal-backdrop first-login-backdrop"><div class="first-login-card"><div class="first-login-icon">✓</div><span class="user-modal-kicker">PREMIÈRE CONNEXION</span><h2>Bienvenue chez PIZZA COSY</h2><p class="first-login-intro">Finalisez votre accès avant de rejoindre votre espace équipe.</p><form id="firstLoginForm" class="first-login-form"><label>Prénom<input name="first_name" required value="'+esc(person.firstName)+'"></label><label>Nom<input name="last_name" required value="'+esc(person.lastName)+'"></label><label>Numéro de téléphone<input name="phone" type="tel" value="'+esc(p.phone||"")+'" placeholder="06 00 00 00 00"></label><label>Nouveau mot de passe<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="8 caractères minimum"></label><label>Confirmer le mot de passe<input name="password_confirm" type="password" required minlength="8" autocomplete="new-password"></label><button class="btn" type="submit">Finaliser mon accès</button><p id="firstLoginMessage" class="user-modal-message"></p></form></div></div>');
+  $("#firstLoginForm")?.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const fd=new FormData(e.target);
+    const password=String(fd.get("password")||"");
+    const confirm=String(fd.get("password_confirm")||"");
+    const msg=$("#firstLoginMessage");
+    if(password!==confirm){msg.textContent="Les mots de passe ne correspondent pas.";return;}
+    if(password.length<8){msg.textContent="Le mot de passe doit contenir au moins 8 caractères.";return;}
+    const fields={full_name:formatPersonName(String(fd.get("first_name")||"").trim(),String(fd.get("last_name")||"").trim()),phone:String(fd.get("phone")||"").trim()};
+    try{
+      const {error:passError}=await supabase.auth.updateUser({password});
+      if(passError)throw passError;
+      const {error:profileError}=await supabase.rpc("complete_first_login",{p_full_name:fields.full_name,p_phone:fields.phone});
+      if(profileError)throw profileError;
+      state.profile={...state.profile,...fields,must_set_password:false};
+      document.getElementById("firstLoginModal")?.remove();
+      render();
+    }catch(err){msg.textContent=err.message||"Impossible de finaliser votre accès.";}
+  });
+}
+
 async function boot(){
   if(booting)return;
   booting=true;
   try{
-    const {data:{session}}=await supabase.auth.getSession();
+    const {data:{session},error:sessionError}=await supabase.auth.getSession();
+    if(sessionError)throw sessionError;
     if(!session){showAuth(true);return;}
 
-    // Never leave the app blank while the profile request is pending.
+    // Show the shell immediately. Profile/data loading must never block the UI.
     showAuth(false);
     if(authLogout)authLogout.hidden=false;
     render();
@@ -237,10 +914,16 @@ async function boot(){
         new Promise((_,reject)=>setTimeout(()=>reject(new Error("Le profil met trop de temps à charger.")),6000))
       ]);
       render();
+      if(state.profile?.must_set_password) openFirstLoginModal();
     }catch(profileError){
-      console.error("CosyHub profile loading error:",profileError);
+      console.error("PIZZA COSY profile loading error:",profileError);
+      state.profile=null;
       state.role="employee";
-      render();
+      const section=document.getElementById("content");
+      if(section){
+        section.innerHTML='<div class="empty"><strong>Impossible de charger votre profil.</strong><br><span class="muted">'+esc(profileError?.message||"Erreur Supabase lors du chargement du profil.")+'</span></div>';
+      }
+      return;
     }
 
     try{
@@ -248,25 +931,23 @@ async function boot(){
         loadData(),
         new Promise((_,reject)=>setTimeout(()=>reject(new Error("Le chargement des données prend trop de temps.")),8000))
       ]);
+      renderEstablishmentSwitcher();
       render();
     }catch(dataError){
-      console.error("CosyHub data loading error:",dataError);
+      console.error("PIZZA COSY data loading error:",dataError);
       const section=document.getElementById("content");
       if(section){
-        section.innerHTML='<div class="empty"><strong>Tableau de bord chargé.</strong><br><span class="muted">Les données n’ont pas encore pu être récupérées. Rechargez la page dans quelques secondes.</span></div>';
+        section.innerHTML='<div class="empty"><strong>Impossible de charger les données.</strong><br><span class="muted">'+esc(dataError?.message||"Erreur Supabase lors du chargement des données.")+'</span></div>';
       }
     }
   }catch(err){
-    showAuth(true);
-    const detail=err?.message||err?.details||err?.hint||"Erreur inconnue";
-    const msg=document.getElementById("authMessage");
-    if(msg){msg.textContent="Erreur de connexion : "+detail;msg.style.color="#b94d61";}
-    console.error("CosyHub boot error:",err);
+    showAuth(false);
+    showRuntimeError(err);
   }finally{
     booting=false;
   }
 }
 window.startCosyHubApp=boot;
-updateThemeButton();
+boot().catch(showRuntimeError);
 
 })();

@@ -14,6 +14,8 @@ create table public.establishments (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   code text unique,
+  group_name text not null default 'Franchises',
+  is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -26,6 +28,16 @@ create table public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create table public.user_establishments (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  establishment_id uuid not null references public.establishments(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, establishment_id)
+);
+
+create index user_establishments_user_idx on public.user_establishments(user_id);
+create index user_establishments_establishment_idx on public.user_establishments(establishment_id);
 
 create table public.documents (
   id uuid primary key default gen_random_uuid(),
@@ -113,6 +125,6 @@ create index notifications_user_idx on public.notifications(user_id, read_at);
 -- {establishment_id}/{document_id}/{file_name}
 
 -- The application backend will enforce:
--- admin: all establishments
--- manager: own establishment
--- employee: own tasks, documents and requests allowed by policy
+-- admin/manager/employee: 1..N establishments through user_establishments.
+-- Network-level documents can use establishment_id = NULL.
+-- Store-level data uses the selected establishment context.
