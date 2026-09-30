@@ -313,7 +313,7 @@ function renderEstablishmentSwitcher(){
   data.establishments.forEach(e=>(groups[e.group_name||"Restaurants"]??=[]).push(e));
   let html="";
   if(data.establishments.length>1){
-    html+='<button type="button" class="establishment-option '+(!state.selectedEstablishmentId?"active":"")+'" data-establishment-select=""><span>✓</span><strong>Tous les restaurants</strong></button>';
+    html+='<button type="button" class="establishment-option '+(!state.selectedEstablishmentId?"active":"")+'" data-establishment-select=""><span>'+(!state.selectedEstablishmentId?"✓":"")+'</span><strong>Tous les restaurants</strong></button>';
   }
   Object.keys(groups).forEach(group=>{
     html+='<div class="establishment-group">'+esc(group)+'</div>';
