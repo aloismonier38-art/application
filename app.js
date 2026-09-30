@@ -22,12 +22,13 @@ supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB
 
 const APP_VERSION="1.1.116";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null,selectedEstablishmentId:localStorage.getItem("cosy-establishment-id")||""};
-const data={tasks:[],documents:[],requests:[],reports:[],users:[],establishments:[],userEstablishmentAccess:[]};
+const data={tasks:[],documents:[],requests:[],reports:[],users:[],establishments:[],userEstablishmentAccess:[],performance:[]};
+const performanceState={mode:"month",monthStart:new Date(new Date().getFullYear(),new Date().getMonth(),1),selectedDates:[]};
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
 const content=$("#content"),pageTitle=$("#pageTitle"),roleLabel=$("#roleLabel"),sidebarUserName=$("#sidebarUserName");
 const authGate=$("#authGate"),authForm=$("#authForm"),authSwitch=$("#authSwitch"),authTitle=$("#authTitle"),authMessage=$("#authMessage"),authSubmit=$("#authSubmit"),authNameWrap=$("#authNameWrap"),authName=$("#authName"),authLogout=$("#authLogout");
-const titles={dashboard:"Tableau de bord",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
+const titles={dashboard:"Performance réseau",documents:"Fiches techniques",access:"Accès",settings:"Paramètres"};
 let authMode=window.__teamhubAuthMode||"login";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
@@ -158,7 +159,110 @@ async function loadData(){
   if(error)throw error;
   data.documents=documents||[];
   await loadUsers();
+  await loadPerformance();
 }
+
+function isoDateLocal(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");
+  return y+"-"+m+"-"+day;
+}
+function parseIsoDate(v){return new Date(v+"T12:00:00");}
+function monthStartDate(d){return new Date(d.getFullYear(),d.getMonth(),1);}
+function monthEndDate(d){return new Date(d.getFullYear(),d.getMonth()+1,0);}
+function weekStartDate(d){
+  const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const day=(x.getDay()+6)%7;
+  x.setDate(x.getDate()-day);
+  return x;
+}
+function money(v){return Number(v||0).toLocaleString("fr-FR",{minimumFractionDigits:0,maximumFractionDigits:0})+" €";}
+function pct(v){return v==null?"—":Number(v).toLocaleString("fr-FR",{minimumFractionDigits:0,maximumFractionDigits:1})+" %";}
+function numberFr(v){return Number(v||0).toLocaleString("fr-FR");}
+function monthLabel(d){return d.toLocaleDateString("fr-FR",{month:"long",year:"numeric"}).replace(/^./,x=>x.toUpperCase());}
+function rangeLabel(start,end){
+  if(isoDateLocal(start)===isoDateLocal(end))return start.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+  return start.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" → "+end.toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+
+async function loadPerformance(){
+  let start,end;
+  if(performanceState.mode==="month"){
+    start=monthStartDate(performanceState.monthStart); end=monthEndDate(performanceState.monthStart);
+  }else if(performanceState.mode==="week"){
+    start=weekStartDate(performanceState.monthStart); end=addDays(start,6);
+  }else{
+    const dates=performanceState.selectedDates.length?performanceState.selectedDates:[isoDateLocal(new Date())];
+    const parsed=dates.map(parseIsoDate).sort((a,b)=>a-b);
+    start=parsed[0]; end=parsed[parsed.length-1];
+  }
+  let query=supabase.from("network_daily_dashboard").select("*").gte("performance_date",isoDateLocal(start)).lte("performance_date",isoDateLocal(end)).order("performance_date",{ascending:true});
+  const {data:rows,error}=await query;
+  if(error)throw error;
+  data.performance=(rows||[]).filter(r=>performanceState.mode!=="days"||performanceState.selectedDates.includes(r.performance_date));
+}
+function aggregatePerformance(rows){
+  const out={revenue_ttc:0,revenue_ht:0,clients:0,new_clients:0,orders:0,revenue_on_site:0,revenue_takeaway:0,revenue_delivery:0,revenue_target:0,latest_rating:null,latest_reviews:null};
+  for(const r of rows){
+    out.revenue_ttc+=Number(r.revenue_ttc||0);
+    out.revenue_ht+=Number(r.revenue_ht||0);
+    out.clients+=Number(r.clients||0);
+    out.new_clients+=Number(r.new_clients||0);
+    out.orders+=Number(r.orders||0);
+    out.revenue_on_site+=Number(r.revenue_on_site||0);
+    out.revenue_takeaway+=Number(r.revenue_takeaway||0);
+    out.revenue_delivery+=Number(r.revenue_delivery||0);
+    out.revenue_target+=Number(r.revenue_target_daily||0);
+    if(r.google_rating!=null && (out.latest_rating==null || r.performance_date>out.latestRatingDate)){out.latest_rating=Number(r.google_rating);out.latestRatingDate=r.performance_date;}
+    if(r.google_review_count!=null && (out.latest_reviews==null || r.performance_date>out.latestReviewsDate)){out.latest_reviews=Number(r.google_review_count);out.latestReviewsDate=r.performance_date;}
+  }
+  out.average_ticket=out.orders?out.revenue_ttc/out.orders:null;
+  out.average_cover=out.clients?out.revenue_on_site/out.clients:null;
+  out.target_pct=out.revenue_target?out.revenue_ttc/out.revenue_target*100:null;
+  return out;
+}
+function calendarHtml(){
+  const cursor=monthStartDate(performanceState.monthStart);
+  const first=weekStartDate(cursor), last=weekStartDate(monthEndDate(cursor));
+  const selected=new Set(performanceState.selectedDates);
+  let html='<div class="performance-calendar-head"><button type="button" class="calendar-nav" data-performance-month="-1">‹</button><strong>'+esc(monthLabel(cursor))+'</strong><button type="button" class="calendar-nav" data-performance-month="1">›</button></div>';
+  html+='<div class="performance-calendar-weekdays">'+["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(x=>'<span>'+x+'</span>').join("")+'</div><div class="performance-calendar-grid">';
+  for(let d=new Date(first);d<=last;d=addDays(d,1)){
+    const iso=isoDateLocal(d),outside=d.getMonth()!==cursor.getMonth(),future=d>new Date();
+    const isSelected=selected.has(iso);
+    html+='<button type="button" class="performance-day '+(outside?"outside ":"")+(isSelected?"selected ":"")+(future?"future":"")+'" data-performance-date="'+iso+'" '+(future?"disabled":"")+'><span>'+d.getDate()+'</span></button>';
+  }
+  return html+'</div>';
+}
+function performancePeriod(){
+  if(performanceState.mode==="month"){
+    return {start:monthStartDate(performanceState.monthStart),end:monthEndDate(performanceState.monthStart),label:"Performance du "+monthLabel(performanceState.monthStart)};
+  }
+  if(performanceState.mode==="week"){
+    const start=weekStartDate(performanceState.monthStart);return {start,end:addDays(start,6),label:"Performance de la semaine"};
+  }
+  const dates=performanceState.selectedDates.length?performanceState.selectedDates:[isoDateLocal(new Date())];
+  const p=dates.map(parseIsoDate).sort((a,b)=>a-b);return {start:p[0],end:p[p.length-1],label:"Performance sur "+dates.length+" journée"+(dates.length>1?"s":"")};
+}
+async function setPerformanceMode(mode){
+  performanceState.mode=mode;
+  if(mode==="days"&&!performanceState.selectedDates.length)performanceState.selectedDates=[isoDateLocal(new Date())];
+  await loadPerformance();
+  renderDashboard();
+}
+async function changePerformanceMonth(delta){
+  performanceState.monthStart=new Date(performanceState.monthStart.getFullYear(),performanceState.monthStart.getMonth()+Number(delta),1);
+  if(performanceState.mode==="days")performanceState.selectedDates=[];
+  await loadPerformance(); renderDashboard();
+}
+async function togglePerformanceDate(iso){
+  if(performanceState.mode!=="days")performanceState.mode="days";
+  const set=new Set(performanceState.selectedDates);
+  if(set.has(iso))set.delete(iso);else set.add(iso);
+  performanceState.selectedDates=[...set].sort();
+  await loadPerformance(); renderDashboard();
+}
+
 function establishmentById(id){return data.establishments.find(e=>e.id===id)||null;}
 function selectedEstablishment(){return establishmentById(state.selectedEstablishmentId);}
 function userEstablishmentIds(userId){
@@ -210,12 +314,48 @@ function taskCard(t){
 }
 
 function renderDashboard(){
- const visibleUsers=visibleUsersForSelectedEstablishment();
- content.innerHTML='<div class="grid">'+
- '<div class="card"><div class="stat-label">Fiches techniques</div><div class="stat-value">'+data.documents.length+'</div><div class="stat-note">Documents disponibles</div></div>'+
- '<div class="card"><div class="stat-label">Membres</div><div class="stat-value">'+visibleUsers.length+'</div><div class="stat-note">'+(state.selectedEstablishmentId?"Membres autorisés":"Comptes gérés")+'</div></div></div>'+
- '<div class="section-title"><h2>Bienvenue sur PIZZA COSY</h2></div>'+
- '<div class="empty">Votre espace équipe est prêt. Retrouvez ici vos fiches techniques et, selon vos droits, la gestion des accès.</div>';
+  const period=performancePeriod();
+  const total=aggregatePerformance(data.performance);
+  const rowsByStore=data.establishments.map(e=>{
+    const rows=data.performance.filter(r=>r.establishment_id===e.id);
+    return {store:e,metrics:aggregatePerformance(rows)};
+  });
+  const progress=total.target_pct;
+  const todayDate=new Date();
+  const elapsedEnd=period.end>todayDate?todayDate:period.end;
+  const daysElapsed=Math.max(1,Math.floor((elapsedEnd-period.start)/86400000)+1);
+  const periodDays=Math.max(1,Math.floor((period.end-period.start)/86400000)+1);
+  const hasData=data.performance.length>0;
+  const modeButton=(label,value)=>'<button type="button" class="performance-mode '+(performanceState.mode===value?"active":"")+'" data-performance-mode="'+value+'">'+label+'</button>';
+  const storeRows=rowsByStore.map(x=>{
+    const m=x.metrics;
+    return '<div class="performance-store-row"><div class="performance-store-name"><strong>'+esc(x.store.name)+'</strong><span>'+esc(x.store.code||"")+'</span></div>'+
+      '<div>'+money(m.revenue_ttc)+'</div><div>'+money(m.revenue_target)+'</div><div>'+pct(m.target_pct)+'</div><div>'+numberFr(m.clients)+'</div><div>'+(m.average_ticket==null?"—":money(m.average_ticket))+'</div><div>'+(m.latest_rating==null?"—":m.latest_rating.toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:2}))+'</div></div>';
+  }).join("");
+  const dailyRows=[...data.performance].sort((a,b)=>a.performance_date.localeCompare(b.performance_date)).map(r=>
+    '<div class="performance-daily-row"><div>'+dateLabel(r.performance_date)+'</div><div>'+esc(r.establishment_name)+'</div><div>'+money(r.revenue_ttc)+'</div><div>'+numberFr(r.clients)+'</div><div>'+numberFr(r.orders)+'</div><div>'+(r.average_ticket==null?"—":money(r.average_ticket))+'</div></div>'
+  ).join("");
+  content.innerHTML=
+    '<div class="performance-head"><div><div class="eyebrow">RÉSEAU · 7 BOUTIQUES</div><h2>'+esc(period.label)+'</h2><div class="muted">'+esc(rangeLabel(period.start,period.end))+'</div></div></div>'+
+    '<div class="performance-toolbar"><div class="performance-modes">'+modeButton("Mois","month")+modeButton("Semaine","week")+modeButton("Journées","days")+'</div>'+
+      '<div class="performance-calendar-wrap">'+calendarHtml()+'</div></div>'+
+    (performanceState.mode==="days"?'<div class="performance-selection">'+(performanceState.selectedDates.length?performanceState.selectedDates.length+" journée"+(performanceState.selectedDates.length>1?"s":"")+" sélectionnée"+(performanceState.selectedDates.length>1?"s":""):"Sélectionnez une ou plusieurs journées")+'</div>':"")+
+    '<div class="performance-cards">'+
+      '<div class="card performance-card"><div class="stat-label">CA réalisé</div><div class="stat-value">'+money(total.revenue_ttc)+'</div><div class="stat-note">'+(total.revenue_target?pct(progress)+" de l’objectif":"Objectif non renseigné")+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Objectif</div><div class="stat-value">'+(total.revenue_target?money(total.revenue_target):"—")+'</div><div class="stat-note">'+(performanceState.mode==="month"?daysElapsed+" / "+periodDays+" jours écoulés":"Période sélectionnée")+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Clients</div><div class="stat-value">'+numberFr(total.clients)+'</div><div class="stat-note">'+numberFr(total.new_clients)+" nouveaux"+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Ticket moyen</div><div class="stat-value">'+(total.average_ticket==null?"—":money(total.average_ticket))+'</div><div class="stat-note">'+numberFr(total.orders)+" commandes"+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Sur place</div><div class="stat-value">'+money(total.revenue_on_site)+'</div><div class="stat-note">'+(total.revenue_ttc?pct(total.revenue_on_site/total.revenue_ttc*100):"—")+' du CA</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">À emporter</div><div class="stat-value">'+money(total.revenue_takeaway)+'</div><div class="stat-note">'+(total.revenue_ttc?pct(total.revenue_takeaway/total.revenue_ttc*100):"—")+' du CA</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Livraison</div><div class="stat-value">'+money(total.revenue_delivery)+'</div><div class="stat-note">'+(total.revenue_ttc?pct(total.revenue_delivery/total.revenue_ttc*100):"—")+' du CA</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Note Google</div><div class="stat-value">'+(total.latest_rating==null?"—":total.latest_rating.toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:2}))+'</div><div class="stat-note">'+(total.latest_reviews==null?"":numberFr(total.latest_reviews)+" avis")+'</div></div>'+
+    '</div>'+
+    '<div class="section-title"><div><h2>Performance des 7 boutiques</h2><div class="muted">Toutes les boutiques voient exactement cette même vue réseau.</div></div></div>'+
+    '<div class="performance-table"><div class="performance-store-header"><div>Boutique</div><div>CA</div><div>Objectif</div><div>% objectif</div><div>Clients</div><div>Ticket</div><div>Note</div></div>'+
+      (storeRows||'<div class="empty">Aucune boutique.</div>')+'</div>'+
+    '<div class="section-title"><div><h2>Détail des journées</h2><div class="muted">Les données sont journalières ; les vues semaine et mois sont calculées automatiquement.</div></div></div>'+
+    '<div class="performance-daily-table"><div class="performance-daily-header"><div>Journée</div><div>Boutique</div><div>CA</div><div>Clients</div><div>Commandes</div><div>Ticket</div></div>'+
+      (hasData?dailyRows:'<div class="empty">Aucune donnée DVORE importée pour cette période.</div>')+'</div>';
 }
 function renderDocuments(){
  const reorderable=can("document");
@@ -524,6 +664,14 @@ document.addEventListener("click",async e=>{
    return;
  }
  const modal=e.target.closest("[data-modal]");if(modal){openModal(modal.dataset.modal).catch(err=>alert("Impossible d’ouvrir le formulaire : "+(err?.message||"Erreur inconnue")));return;}
+
+ const performanceMode=e.target.closest("[data-performance-mode]");
+ if(performanceMode){setPerformanceMode(performanceMode.dataset.performanceMode).catch(err=>alert(err?.message||"Impossible de charger les performances."));return;}
+ const performanceMonth=e.target.closest("[data-performance-month]");
+ if(performanceMonth){changePerformanceMonth(performanceMonth.dataset.performanceMonth).catch(err=>alert(err?.message||"Impossible de changer de mois."));return;}
+ const performanceDate=e.target.closest("[data-performance-date]");
+ if(performanceDate&&!performanceDate.disabled){togglePerformanceDate(performanceDate.dataset.performanceDate).catch(err=>alert(err?.message||"Impossible de charger la journée."));return;}
+
  const filter=e.target.closest("[data-filter]");if(filter){state.taskFilter=filter.dataset.filter;renderTasks();return;}
  const preview=e.target.closest("[data-preview]");if(preview){await openPreview(preview.dataset.preview);return;}
  const menu=e.target.closest("[data-doc-menu]");if(menu){document.querySelectorAll(".doc-menu").forEach(x=>x.hidden=true);const box=document.querySelector('[data-menu-for="'+menu.dataset.docMenu+'"]');if(box)box.hidden=false;return;}
