@@ -256,7 +256,7 @@ async function setPerformanceMode(mode){
 }
 async function changePerformanceMonth(delta){
   performanceState.monthStart=new Date(performanceState.monthStart.getFullYear(),performanceState.monthStart.getMonth()+Number(delta),1);
-  if(performanceState.mode==="days")performanceState.selectedDates=[];
+  if(performanceState.mode==="days"){performanceState.selectedDates=[];performanceState.rangeStart=null;}
   await loadPerformance(); renderDashboard();
 }
 function datesBetweenInclusive(startIso,endIso){
