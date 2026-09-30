@@ -227,7 +227,7 @@ function aggregatePerformance(rows){
 }
 function calendarHtml(){
   const cursor=monthStartDate(performanceState.monthStart);
-  const first=weekStartDate(cursor), last=addDays(weekStartDate(monthEndDate(cursor)),6);
+  const first=weekStartDate(cursor), last=addDays(first, 41);
   const selected=new Set(performanceState.selectedDates);
   let html='<div class="performance-calendar-head"><button type="button" class="calendar-nav" data-performance-month="-1">‹</button><strong>'+esc(monthLabel(cursor))+'</strong><button type="button" class="calendar-nav" data-performance-month="1">›</button></div>';
   html+='<div class="performance-calendar-weekdays">'+["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(x=>'<span>'+x+'</span>').join("")+'</div><div class="performance-calendar-grid">';
