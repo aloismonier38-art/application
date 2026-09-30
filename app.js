@@ -319,47 +319,106 @@ function taskCard(t){
 
 function renderDashboard(){
   const period=performancePeriod();
-  const total=aggregatePerformance(data.performance);
-  const rowsByStore=data.establishments.map(e=>{
-    const rows=data.performance.filter(r=>r.establishment_id===e.id);
-    return {store:e,metrics:aggregatePerformance(rows)};
-  });
+  const monthlyMode=performanceState.mode==="month"&&data.monthlyPerformance.length>0;
+  const monthlyRows=data.establishments.map(store=>{
+    const m=data.monthlyPerformance.find(r=>r.establishment_id===store.id);
+    return {store,metrics:m||{}};
+  }).filter(x=>x.metrics.revenue_ttc!=null);
+  const total=monthlyMode?monthlyRows.reduce((a,x)=>{
+    const m=x.metrics;
+    a.revenue_ttc+=Number(m.revenue_ttc||0); a.revenue_target+=Number(m.revenue_target||0);
+    a.revenue_on_site+=Number(m.revenue_on_site||0); a.revenue_takeaway+=Number(m.revenue_takeaway||0);
+    a.revenue_delivery+=Number(m.revenue_delivery||0); a.revenue_click_collect+=Number(m.revenue_click_collect||0);
+    a.revenue_pranzo+=Number(m.revenue_pranzo||0); a.revenue_lalah+=Number(m.revenue_lalah||0);
+    a.review_count+=Number(m.review_count||0);
+    a.satisfactionSum+=Number(m.satisfaction_pct||0)*Number(m.review_count||0);
+    a.npsSum+=Number(m.nps_pct||0)*Number(m.review_count||0);
+    a.ratingSum+=Number(m.average_rating||0)*Number(m.review_count||0);
+    a.reviewWeight+=Number(m.review_count||0);
+    a.ticketWeight+=Number(m.revenue_ttc||0);
+    a.ticketNumerator+=Number(m.revenue_ttc||0);
+    a.ticketDenominator+=Number(m.revenue_ttc||0)/Math.max(Number(m.average_ticket||0),0.01);
+    a.coverNumerator+=Number(m.revenue_on_site||0);
+    a.coverDenominator+=Number(m.revenue_on_site||0)/Math.max(Number(m.average_cover||0),0.01);
+    return a;
+  },{revenue_ttc:0,revenue_target:0,revenue_on_site:0,revenue_takeaway:0,revenue_delivery:0,revenue_click_collect:0,revenue_pranzo:0,revenue_lalah:0,review_count:0,satisfactionSum:0,npsSum:0,ratingSum:0,reviewWeight:0,ticketNumerator:0,ticketDenominator:0,coverNumerator:0,coverDenominator:0})
+  :aggregatePerformance(data.performance);
+  if(monthlyMode){
+    total.average_ticket=total.ticketDenominator?total.ticketNumerator/total.ticketDenominator:null;
+    total.average_cover=total.coverDenominator?total.coverNumerator/total.coverDenominator:null;
+    total.average_rating=total.reviewWeight?total.ratingSum/total.reviewWeight:null;
+    total.satisfaction_pct=total.reviewWeight?total.satisfactionSum/total.reviewWeight:null;
+    total.nps_pct=total.reviewWeight?total.npsSum/total.reviewWeight:null;
+    total.target_pct=total.revenue_target?total.revenue_ttc/total.revenue_target*100:null;
+  }
   const progress=total.target_pct;
   const todayDate=new Date();
   const elapsedEnd=period.end>todayDate?todayDate:period.end;
   const daysElapsed=Math.max(1,Math.floor((elapsedEnd-period.start)/86400000)+1);
   const periodDays=Math.max(1,Math.floor((period.end-period.start)/86400000)+1);
-  const hasData=data.performance.length>0;
   const modeButton=(label,value)=>'<button type="button" class="performance-mode '+(performanceState.mode===value?"active":"")+'" data-performance-mode="'+value+'">'+label+'</button>';
-  const storeRows=rowsByStore.map(x=>{
+
+  let storeRows="";
+  if(monthlyMode){
+    storeRows=monthlyRows.map(x=>{
+      const m=x.metrics, p=m.revenue_target?Number(m.revenue_ttc||0)/Number(m.revenue_target)*100:null;
+      return '<div class="performance-store-row"><div class="performance-store-name"><strong>'+esc(x.store.name)+'</strong><span>'+esc(x.store.code||"")+'</span></div>'+
+        '<div>'+money(m.revenue_ttc)+'</div><div>'+money(m.revenue_target)+'</div><div>'+pct(p)+'</div>'+
+        '<div>'+(m.average_ticket==null?"—":money(m.average_ticket))+'</div><div>'+(m.average_cover==null?"—":money(m.average_cover))+'</div>'+
+        '<div>'+numberFr(m.review_count||0)+'</div><div>'+(m.average_rating==null?"—":Number(m.average_rating).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}))+'</div></div>';
+    }).join("");
+  }else{
+    const rowsByStore=data.establishments.map(e=>({store:e,metrics:aggregatePerformance(data.performance.filter(r=>r.establishment_id===e.id))}));
+    storeRows=rowsByStore.map(x=>{
+      const m=x.metrics;
+      return '<div class="performance-store-row"><div class="performance-store-name"><strong>'+esc(x.store.name)+'</strong><span>'+esc(x.store.code||"")+'</span></div>'+
+        '<div>'+money(m.revenue_ttc)+'</div><div>'+money(m.revenue_target)+'</div><div>'+pct(m.target_pct)+'</div><div>'+numberFr(m.clients)+'</div>'+
+        '<div>'+(m.average_ticket==null?"—":money(m.average_ticket))+'</div><div>'+(m.latest_rating==null?"—":m.latest_rating.toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:2}))+'</div></div>';
+    }).join("");
+  }
+
+  const modeData=monthlyMode?[
+    ["Livraison",total.revenue_delivery],
+    ["À emporter",total.revenue_takeaway],
+    ["Sur place",total.revenue_on_site],
+    ["Click & Collect",total.revenue_click_collect],
+    ["PRANZO",total.revenue_pranzo],
+    ["LALAH",total.revenue_lalah]
+  ]:[["Sur place",total.revenue_on_site],["À emporter",total.revenue_takeaway],["Livraison",total.revenue_delivery]];
+  const modeCards=modeData.map(([label,value])=>'<div class="card performance-card"><div class="stat-label">'+label+'</div><div class="stat-value">'+money(value)+'</div><div class="stat-note">'+(total.revenue_ttc?pct(Number(value||0)/total.revenue_ttc*100):"—")+' du CA</div></div>').join("");
+  const monthlyModeRows=monthlyMode?monthlyRows.map(x=>{
     const m=x.metrics;
-    return '<div class="performance-store-row"><div class="performance-store-name"><strong>'+esc(x.store.name)+'</strong><span>'+esc(x.store.code||"")+'</span></div>'+
-      '<div>'+money(m.revenue_ttc)+'</div><div>'+money(m.revenue_target)+'</div><div>'+pct(m.target_pct)+'</div><div>'+numberFr(m.clients)+'</div><div>'+(m.average_ticket==null?"—":money(m.average_ticket))+'</div><div>'+(m.latest_rating==null?"—":m.latest_rating.toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:2}))+'</div></div>';
-  }).join("");
+    return '<div class="performance-mode-row"><div class="performance-store-name"><strong>'+esc(x.store.name)+'</strong></div>'+
+      '<div>'+money(m.revenue_on_site)+'</div><div>'+money(m.revenue_takeaway)+'</div><div>'+money(m.revenue_delivery)+'</div><div>'+money(m.revenue_click_collect)+'</div></div>';
+  }).join(""):"";
+
   const dailyRows=[...data.performance].sort((a,b)=>a.performance_date.localeCompare(b.performance_date)).map(r=>
     '<div class="performance-daily-row"><div>'+dateLabel(r.performance_date)+'</div><div>'+esc(r.establishment_name)+'</div><div>'+money(r.revenue_ttc)+'</div><div>'+numberFr(r.clients)+'</div><div>'+numberFr(r.orders)+'</div><div>'+(r.average_ticket==null?"—":money(r.average_ticket))+'</div></div>'
   ).join("");
+
   content.innerHTML=
     '<div class="performance-head"><div><div class="eyebrow">RÉSEAU · 7 BOUTIQUES</div><h2>'+esc(period.label)+'</h2><div class="muted">'+esc(rangeLabel(period.start,period.end))+'</div></div></div>'+
-    '<div class="performance-toolbar"><div class="performance-modes">'+modeButton("Mois","month")+modeButton("Semaine","week")+modeButton("Journées","days")+'</div>'+
-      '<div class="performance-calendar-wrap">'+calendarHtml()+'</div></div>'+
+    '<div class="performance-toolbar"><div class="performance-modes">'+modeButton("Mois","month")+modeButton("Semaine","week")+modeButton("Journées","days")+'</div><div class="performance-calendar-wrap">'+calendarHtml()+'</div></div>'+
     (performanceState.mode==="days"?'<div class="performance-selection">'+(performanceState.selectedDates.length?performanceState.selectedDates.length+" journée"+(performanceState.selectedDates.length>1?"s":"")+" sélectionnée"+(performanceState.selectedDates.length>1?"s":""):"Sélectionnez une ou plusieurs journées")+'</div>':"")+
     '<div class="performance-cards">'+
       '<div class="card performance-card"><div class="stat-label">CA réalisé</div><div class="stat-value">'+money(total.revenue_ttc)+'</div><div class="stat-note">'+(total.revenue_target?pct(progress)+" de l’objectif":"Objectif non renseigné")+'</div></div>'+
-      '<div class="card performance-card"><div class="stat-label">Objectif</div><div class="stat-value">'+(total.revenue_target?money(total.revenue_target):"—")+'</div><div class="stat-note">'+(performanceState.mode==="month"?daysElapsed+" / "+periodDays+" jours écoulés":"Période sélectionnée")+'</div></div>'+
-      '<div class="card performance-card"><div class="stat-label">Clients</div><div class="stat-value">'+numberFr(total.clients)+'</div><div class="stat-note">'+numberFr(total.new_clients)+" nouveaux"+'</div></div>'+
-      '<div class="card performance-card"><div class="stat-label">Ticket moyen</div><div class="stat-value">'+(total.average_ticket==null?"—":money(total.average_ticket))+'</div><div class="stat-note">'+numberFr(total.orders)+" commandes"+'</div></div>'+
-      '<div class="card performance-card"><div class="stat-label">Sur place</div><div class="stat-value">'+money(total.revenue_on_site)+'</div><div class="stat-note">'+(total.revenue_ttc?pct(total.revenue_on_site/total.revenue_ttc*100):"—")+' du CA</div></div>'+
-      '<div class="card performance-card"><div class="stat-label">À emporter</div><div class="stat-value">'+money(total.revenue_takeaway)+'</div><div class="stat-note">'+(total.revenue_ttc?pct(total.revenue_takeaway/total.revenue_ttc*100):"—")+' du CA</div></div>'+
-      '<div class="card performance-card"><div class="stat-label">Livraison</div><div class="stat-value">'+money(total.revenue_delivery)+'</div><div class="stat-note">'+(total.revenue_ttc?pct(total.revenue_delivery/total.revenue_ttc*100):"—")+' du CA</div></div>'+
-      '<div class="card performance-card"><div class="stat-label">Note Google</div><div class="stat-value">'+(total.latest_rating==null?"—":total.latest_rating.toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:2}))+'</div><div class="stat-note">'+(total.latest_reviews==null?"":numberFr(total.latest_reviews)+" avis")+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Objectif</div><div class="stat-value">'+(total.revenue_target?money(total.revenue_target):"—")+'</div><div class="stat-note">'+(monthlyMode?daysElapsed+" / "+periodDays+" jours écoulés":"Période sélectionnée")+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Ticket moyen</div><div class="stat-value">'+(total.average_ticket==null?"—":money(total.average_ticket))+'</div><div class="stat-note">CA / tickets</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Couvert moyen</div><div class="stat-value">'+(total.average_cover==null?"—":money(total.average_cover))+'</div><div class="stat-note">Sur place</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Avis clients</div><div class="stat-value">'+numberFr(monthlyMode?total.review_count:(total.latest_reviews||0))+'</div><div class="stat-note">depuis le début du mois</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Note moyenne</div><div class="stat-value">'+(monthlyMode&&total.average_rating!=null?Number(total.average_rating).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}):"—")+'</div><div class="stat-note">'+(monthlyMode?pct(total.satisfaction_pct)+" satisfaits":"—")+'</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">Satisfaction</div><div class="stat-value">'+(monthlyMode?pct(total.satisfaction_pct):"—")+'</div><div class="stat-note">notes ≥ 4</div></div>'+
+      '<div class="card performance-card"><div class="stat-label">NPS</div><div class="stat-value">'+(monthlyMode?pct(total.nps_pct):"—")+'</div><div class="stat-note">réseau</div></div>'+
     '</div>'+
+    '<div class="section-title"><div><h2>Répartition du CA par mode de consommation</h2><div class="muted">Depuis le début du mois</div></div></div>'+
+    '<div class="performance-cards performance-mode-cards">'+modeCards+'</div>'+
+    (monthlyMode?'<div class="performance-mode-table"><div class="performance-mode-header"><div>Restaurant</div><div>Sur place</div><div>À emporter</div><div>Livraison</div><div>Click & Collect</div></div>'+monthlyModeRows+'</div>':"")+
     '<div class="section-title"><div><h2>Performance des 7 boutiques</h2><div class="muted">Toutes les boutiques voient exactement cette même vue réseau.</div></div></div>'+
-    '<div class="performance-table"><div class="performance-store-header"><div>Boutique</div><div>CA</div><div>Objectif</div><div>% objectif</div><div>Clients</div><div>Ticket</div><div>Note</div></div>'+
+    '<div class="performance-table"><div class="performance-store-header">'+(monthlyMode?'<div>Restaurant</div><div>CA</div><div>Objectif</div><div>% objectif</div><div>Ticket</div><div>Couvert</div><div>Avis</div><div>Note</div>':'<div>Boutique</div><div>CA</div><div>Objectif</div><div>% objectif</div><div>Clients</div><div>Ticket</div><div>Note</div>')+'</div>'+
       (storeRows||'<div class="empty">Aucune boutique.</div>')+'</div>'+
     '<div class="section-title"><div><h2>Détail des journées</h2><div class="muted">Les données sont journalières ; les vues semaine et mois sont calculées automatiquement.</div></div></div>'+
     '<div class="performance-daily-table"><div class="performance-daily-header"><div>Journée</div><div>Boutique</div><div>CA</div><div>Clients</div><div>Commandes</div><div>Ticket</div></div>'+
-      (hasData?dailyRows:'<div class="empty">Aucune donnée DVORE importée pour cette période.</div>')+'</div>';
+      (data.performance.length?dailyRows:'<div class="empty">Aucune donnée DVORE importée pour cette période.</div>')+'</div>';
 }
 function renderDocuments(){
  const reorderable=can("document");
