@@ -989,3 +989,34 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
 .performance-daily-row {
   column-gap: 14px;
 }
+
+
+/* Performance réseau — tableau mensuel enrichi */
+.performance-table .performance-store-header,
+.performance-table .performance-store-row{
+  grid-template-columns:minmax(190px,1.5fr) repeat(7,minmax(88px,1fr));
+}
+.performance-table .performance-store-row>div:not(:first-child),
+.performance-table .performance-store-header>div:not(:first-child){text-align:right}
+.performance-mode-table{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:auto}
+.performance-mode-header,.performance-mode-row{
+  display:grid;
+  grid-template-columns:minmax(190px,1.5fr) repeat(4,minmax(110px,1fr));
+  min-width:720px;
+  align-items:center;
+  gap:14px;
+  padding:12px 15px;
+}
+.performance-mode-header{
+  background:#f7f6f2;color:var(--muted);font-size:10px;text-transform:uppercase;font-weight:800;letter-spacing:.04em;
+}
+.performance-mode-row{border-top:1px solid var(--line);font-size:13px}
+.performance-mode-row>div:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.performance-mode-cards{grid-template-columns:repeat(6,1fr)}
+@media(max-width:1000px){.performance-mode-cards{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:850px){
+  .performance-table .performance-store-header,
+  .performance-table .performance-store-row{grid-template-columns:minmax(180px,1.4fr) repeat(7,minmax(85px,1fr));}
+  .performance-mode-cards{grid-template-columns:1fr 1fr}
+}
+@media(max-width:520px){.performance-mode-cards{grid-template-columns:1fr}}
