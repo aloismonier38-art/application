@@ -927,3 +927,47 @@ body.dark .auth-invite-info{background:#242b27;border-color:#3a433e}.auth-invite
   .establishment-check-grid{grid-template-columns:1fr}
   .establishment-menu{max-height:calc(100dvh - 220px)}
 }
+
+
+/* Performance réseau */
+.performance-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px}
+.performance-head h2{font-size:22px;margin:3px 0 3px}
+.performance-toolbar{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:16px}
+.performance-modes{display:flex;gap:5px;background:#f1f1ee;padding:4px;border-radius:10px}
+.performance-mode{border:0;background:transparent;color:var(--muted);padding:9px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700}
+.performance-mode.active{background:#fff;color:var(--green);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.performance-calendar-wrap{min-width:300px;flex:1}
+.performance-calendar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.performance-calendar-head strong{font-size:13px}
+.calendar-nav{border:0;background:#f4f3ef;color:var(--green);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:18px}
+.performance-calendar-weekdays,.performance-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.performance-calendar-weekdays span{text-align:center;color:var(--muted);font-size:9px;font-weight:700;padding:2px}
+.performance-day{border:0;background:#f8f7f3;color:var(--green);height:28px;border-radius:6px;cursor:pointer;font-size:11px}
+.performance-day.outside{color:#b8bdb8;background:transparent}
+.performance-day.selected{background:var(--green);color:#fff;font-weight:800}
+.performance-day.future{opacity:.35;cursor:default}
+.performance-selection{margin:-4px 0 16px;color:var(--muted);font-size:12px}
+.performance-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.performance-card{min-height:118px}
+.performance-card .stat-value{font-size:25px}
+.performance-table,.performance-daily-table{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:auto}
+.performance-store-header,.performance-store-row{display:grid;grid-template-columns:minmax(180px,1.5fr) repeat(6,minmax(90px,1fr));min-width:760px;align-items:center;gap:10px;padding:12px 15px}
+.performance-store-header{background:#f7f6f2;color:var(--muted);font-size:10px;text-transform:uppercase;font-weight:800;letter-spacing:.04em}
+.performance-store-row{border-top:1px solid var(--line);font-size:13px}
+.performance-store-row>div:not(:first-child){text-align:right}
+.performance-store-name{display:flex;flex-direction:column;gap:2px}
+.performance-store-name span{font-size:10px;color:var(--muted)}
+.performance-daily-header,.performance-daily-row{display:grid;grid-template-columns:120px minmax(150px,1.4fr) repeat(4,minmax(90px,1fr));min-width:720px;align-items:center;gap:10px;padding:11px 15px}
+.performance-daily-header{background:#f7f6f2;color:var(--muted);font-size:10px;text-transform:uppercase;font-weight:800}
+.performance-daily-row{border-top:1px solid var(--line);font-size:12px}
+.performance-daily-row>div:nth-child(n+3){text-align:right}
+@media(max-width:850px){
+ .performance-cards{grid-template-columns:1fr 1fr}
+ .performance-toolbar{display:block}
+ .performance-modes{margin-bottom:12px;width:max-content}
+ .performance-calendar-wrap{min-width:0}
+}
+@media(max-width:520px){
+ .performance-cards{grid-template-columns:1fr}
+ .performance-mode{padding:8px 10px}
+}
