@@ -20,7 +20,7 @@ if(!window.TEAMHUB_SUPABASE_URL || !window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY){
 }
 supabase=window.supabase.createClient(window.TEAMHUB_SUPABASE_URL,window.TEAMHUB_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storage:window.localStorage}});
 
-const APP_VERSION="1.1.127";
+const APP_VERSION="1.1.128";
 const state={role:"employee",view:"dashboard",taskFilter:"open",profile:null,selectedEstablishmentId:localStorage.getItem("cosy-establishment-id")||""};
 const data={tasks:[],documents:[],requests:[],reports:[],users:[],establishments:[],userEstablishmentAccess:[],performance:[],monthlyPerformance:[]};
 const performanceState={mode:"month",monthStart:new Date(new Date().getFullYear(),new Date().getMonth(),1),selectedDates:[],rangeStart:null,establishmentId:localStorage.getItem("cosy-establishment-id")||""};
