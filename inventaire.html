@@ -9,7 +9,7 @@
 <div class="inv-head"><div><div class="inv-muted">PIZZA COSY · COSYHUB</div><h1>Inventaire & préparation</h1><div class="inv-muted">Saisie des stocks et calcul des quantités à préparer</div></div><button class="inv-btn alt" id="backBtn">Retour à CosyHub</button></div>
 <div id="message" class="inv-message inv-hidden" role="status"></div>
 <div class="inv-note"><strong>Fonctionnalité en cours d’intégration.</strong> Les produits et recommandations viennent de Supabase. Les quantités ne sont enregistrées qu’au moment où vous sauvegardez l’inventaire.</div>
-<div class="inv-controls"><label>Établissement<select id="establishment"></select></label><label>Jour de préparation<select id="day"><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select></label><label>Date du service<input id="serviceDate" type="date"></label></div>
+<div class="inv-controls"><label>Établissement<select id="establishment"></select></label><label>Service<select id="service"><option value="lunch">Midi</option><option value="dinner" selected>Soir</option></select></label><label>Jour de préparation<select id="day"><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select></label><label>Date du service<input id="serviceDate" type="date"></label></div>
 <div class="inv-stats"><div class="inv-stat"><span>Références comptées</span><strong id="counted">0 / 0</strong></div><div class="inv-stat"><span>À préparer</span><strong id="prepCount">0</strong></div><div class="inv-stat"><span>Ruptures de stock</span><strong id="shortages">0</strong></div></div>
 <div class="inv-layout"><section><input id="search" class="inv-search" placeholder="Rechercher un produit ou une catégorie…" style="width:100%;margin-bottom:4px"><div id="productList"></div><div class="inv-actions"><button class="inv-btn" id="saveBtn">Enregistrer l’inventaire</button><button class="inv-btn alt" id="showPrepBtn">Afficher la liste préparatoire</button></div></section>
 <aside class="inv-panel"><h2 style="margin-top:0">Liste préparatoire</h2><p class="inv-muted">Quantité à préparer = recommandation du jour − stock compté, minimum zéro.</p><div id="prepList"><p class="inv-muted">Renseignez les stocks pour calculer les besoins.</p></div><div class="inv-actions"><button class="inv-btn alt" id="printBtn">Imprimer / PDF</button><button class="inv-btn alt" id="csvBtn">Exporter CSV</button></div></aside></div>
@@ -49,7 +49,7 @@ async function load(){
  user=session.user;
  const p=await client.from('profiles').select('id,role,establishment_id').eq('id',user.id).maybeSingle();if(p.error)throw p.error;
  let e=await client.from('establishments').select('id,name,code').eq('is_active',true).order('name');if(e.error)throw e.error;establishments=e.data||[];
- if(p.data?.role!=='admin')establishments=establishments.filter(x=>x.id===p.data?.establishment_id);
+ if(p.data?.role!=='admin'){const memberships=await client.from('user_establishments').select('establishment_id').eq('user_id',user.id);if(memberships.error)throw memberships.error;const allowed=new Set([p.data?.establishment_id,...(memberships.data||[]).map(x=>x.establishment_id)].filter(Boolean));establishments=establishments.filter(x=>allowed.has(x.id));}
  if(!establishments.length)throw Error('Aucun établissement autorisé pour ce compte.');
  $('establishment').innerHTML=establishments.map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join('');
  if(p.data?.establishment_id)$('establishment').value=p.data.establishment_id;
@@ -59,12 +59,12 @@ async function loadData(){
  const est=selectedEst(),day=$('day').value;
  const [p,r]=await Promise.all([
  client.from('inventory_products').select('id,name,category,unit,sort_order').eq('is_active',true).order('sort_order').order('name'),
- client.from('prep_day_recommendations').select('product_id,recommended_quantity').eq('establishment_id',est).eq('prep_day',day)
+ client.from('prep_recommendations').select('product_id,recommended_quantity').eq('establishment_id',est).eq('service',$('service').value)
  ]);
  if(p.error)throw p.error;if(r.error)throw r.error;
  products=p.data||[];recos=Object.fromEntries((r.data||[]).map(x=>[x.product_id,Number(x.recommended_quantity)]));
  stocks={};
- const session=await client.from('inventory_sessions').select('id,status').eq('establishment_id',est).eq('service_date',$('serviceDate').value).eq('service','dinner').maybeSingle();
+ const session=await client.from('inventory_sessions').select('id,status').eq('establishment_id',est).eq('service_date',$('serviceDate').value).eq('service',$('service').value).maybeSingle();
  if(session.error)throw session.error;savedSession=session.data;
  if(savedSession){const lines=await client.from('inventory_lines').select('product_id,stock_quantity').eq('session_id',savedSession.id);if(lines.error)throw lines.error;(lines.data||[]).forEach(x=>stocks[x.product_id]=x.stock_quantity)}
  render();
@@ -76,7 +76,7 @@ async function save(){
  $('saveBtn').disabled=true;
  try{
  let sid=savedSession?.id;
- if(!sid){const {data,error}=await client.from('inventory_sessions').insert({establishment_id:selectedEst(),service:'dinner',service_date:$('serviceDate').value,status:'draft',created_by:user.id}).select('id').single();if(error)throw error;sid=data.id;savedSession={id:sid,status:'draft'}}
+ if(!sid){const {data,error}=await client.from('inventory_sessions').insert({establishment_id:selectedEst(),service:$('service').value,service_date:$('serviceDate').value,status:'draft',created_by:user.id}).select('id').single();if(error)throw error;sid=data.id;savedSession={id:sid,status:'draft'}}
  const lines=products.map(p=>({session_id:sid,product_id:p.id,stock_quantity:stocks[p.id]===undefined||stocks[p.id]===null?null:Number(stocks[p.id]),recommended_quantity:Number(recos[p.id]||0),counted_by:user.id,counted_at:stocks[p.id]===undefined||stocks[p.id]===null?null:new Date().toISOString()}));
  const {error}=await client.from('inventory_lines').upsert(lines,{onConflict:'session_id,product_id'});if(error)throw error;
  const {error:se}=await client.from('inventory_sessions').update({status:'submitted',submitted_at:new Date().toISOString()}).eq('id',sid);if(se)throw se;
@@ -85,7 +85,7 @@ async function save(){
 }
 $('backBtn').onclick=()=>location.href='index.html';$('search').oninput=render;$('saveBtn').onclick=save;$('showPrepBtn').onclick=()=>{$('prepList').scrollIntoView({behavior:'smooth',block:'start'})};$('printBtn').onclick=()=>window.print();
 $('csvBtn').onclick=()=>{const rows=[['Produit','Catégorie','Stock','Recommandé','À préparer','Unité'],...products.filter(p=>getPrep(p)>0).map(p=>[p.name,p.category,stocks[p.id]??'',recos[p.id]||0,getPrep(p),p.unit])];const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='cosyhub-liste-preparatoire.csv';a.click();URL.revokeObjectURL(a.href)};
-$('serviceDate').value=today();$('day').value=dayFromDate(today());$('serviceDate').onchange=async()=>{$('day').value=dayFromDate($('serviceDate').value);try{await loadData()}catch(e){msg(e.message,true)}};$('day').onchange=async()=>{try{await loadData()}catch(e){msg(e.message,true)}};$('establishment').onchange=async()=>{try{await loadData()}catch(e){msg(e.message,true)}};
+$('serviceDate').value=today();$('day').value=dayFromDate(today());$('serviceDate').onchange=async()=>{$('day').value=dayFromDate($('serviceDate').value);try{await loadData()}catch(e){msg(e.message,true)}};$('day').onchange=async()=>{try{await loadData()}catch(e){msg(e.message,true)}};$('service').onchange=async()=>{try{await loadData()}catch(e){msg(e.message,true)}};$('establishment').onchange=async()=>{try{await loadData()}catch(e){msg(e.message,true)}};
 load().catch(e=>msg('Chargement impossible : '+(e.message||e),true));
 })();
 </script></body></html>
