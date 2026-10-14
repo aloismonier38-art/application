@@ -4,9 +4,34 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script>
 <style>
 .inv-wrap{max-width:1120px;margin:auto;padding:28px 20px 60px}.inv-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}.inv-head h1{margin:0;color:var(--green)}.inv-muted{color:var(--muted)}.inv-note{padding:12px 14px;background:#fff4e6;border:1px solid #f0d7b2;margin:18px 0}.inv-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.inv-controls label{display:grid;gap:5px;font-size:12px;font-weight:700;color:var(--muted)}.inv-controls select,.inv-controls input,.inv-search{padding:11px;border:1px solid var(--line);background:#fff;color:var(--green);font:inherit;border-radius:8px}.inv-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.inv-stat,.inv-panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}.inv-stat span{display:block;color:var(--muted);font-size:12px}.inv-stat strong{font-size:24px;color:var(--green)}.inv-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.7fr);gap:14px;margin-top:16px}.inv-section{margin:12px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}.inv-cat{display:flex;justify-content:space-between;width:100%;padding:13px 15px;border:0;background:#f5f7f4;color:var(--green);font-weight:800;text-align:left}.inv-row{display:grid;grid-template-columns:minmax(0,1fr) 120px;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid #edf0ec}.inv-row small{display:block;color:var(--muted);font-size:11px}.inv-row input{width:100%;padding:9px;border:1px solid var(--line);border-radius:7px;font:inherit}.inv-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.inv-btn{padding:11px 15px;border:1px solid var(--green);border-radius:8px;background:var(--green);color:#fff;font-weight:750;cursor:pointer}.inv-btn.alt{background:#fff;color:var(--green)}.inv-message{margin:12px 0;padding:10px 12px;border-radius:8px;background:#edf6ef;color:#245d49}.inv-error{background:#fff0f0;color:#9a2d35}.inv-hidden{display:none!important}.inv-prep-item{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}@media(max-width:760px){.inv-controls,.inv-layout{grid-template-columns:1fr}.inv-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.inv-stat{padding:10px}.inv-stat strong{font-size:19px}.inv-row{grid-template-columns:minmax(0,1fr) 100px}}@media print{.sidebar,.bottom-nav,.inv-controls,.inv-actions,.inv-note,.inv-stats{display:none!important}.inv-wrap{padding:0}.inv-layout{display:block}.inv-panel{border:0}}
+</style><style id="cosy-refresh">
+:root{--fresh-green:#245744;--fresh-green-dark:#194534;--fresh-bg:#f5f7f5;--fresh-line:#e2e8e3;--fresh-muted:#687a70;--fresh-cream:#fffaf1}
+body{background:var(--fresh-bg)!important;color:#203d30!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;line-height:1.5}
+h1{font-size:clamp(28px,3vw,38px)!important;line-height:1.15;letter-spacing:-.8px;margin:8px 0 8px!important;color:var(--fresh-green)!important}
+h2{letter-spacing:-.35px;color:var(--fresh-green)!important}
+p{line-height:1.55}
+.wrap,.inv-wrap{max-width:1160px!important;padding:32px 24px 64px!important;margin:0 auto!important}
+.head,.inv-header{margin-bottom:24px!important;align-items:center!important}
+.panel,.items,.inv-panel,.inv-stat,.inv-card,.inv-table-wrap{border:1px solid var(--fresh-line)!important;border-radius:14px!important;box-shadow:0 3px 14px rgba(26,60,42,.035)!important;background:#fff!important}
+.controls,.inv-controls{gap:16px!important;margin:20px 0!important}
+label{font-weight:650!important;letter-spacing:.05px}
+input,select{border:1px solid #d7e1d9!important;border-radius:8px!important;min-height:42px;background:#fff!important;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus{outline:none;border-color:var(--fresh-green)!important;box-shadow:0 0 0 3px rgba(36,87,68,.12)!important}
+button,.btn,.inv-btn{border-radius:9px!important;min-height:42px;transition:transform .15s,background .15s!important;font-weight:700!important}
+button:hover,.btn:hover,.inv-btn:hover{transform:translateY(-1px)}
+.btn,.inv-btn:not(.alt){background:var(--fresh-green)!important;border-color:var(--fresh-green)!important;color:#fff!important}
+.btn.alt,.inv-btn.alt{background:#fff!important;color:var(--fresh-green)!important;border-color:#cbd9ce!important}
+.message{border:1px solid #e7d6b8;border-radius:10px!important;background:var(--fresh-cream)!important;padding:14px 16px!important}
+.table th{background:#f2f6f2;position:sticky;top:0}
+.table td,.table th{padding:12px 14px!important}
+.table tbody tr:hover{background:#f8faf8}
+.item{padding:16px 4px!important;align-items:center}
+.qty{color:var(--fresh-green);font-variant-numeric:tabular-nums}
+@media(max-width:680px){.wrap,.inv-wrap{padding:20px 14px 40px!important}.controls,.inv-controls{display:grid!important;grid-template-columns:1fr!important}.head,.inv-header{align-items:flex-start!important}.panel{padding:14px!important}.table input{min-width:95px!important}}
+@media print{body{background:#fff!important}.wrap{max-width:none!important;padding:0!important}.items{box-shadow:none!important}}
 </style></head><body>
 <div class="inv-wrap">
-<div class="inv-head"><div><div class="inv-muted">PIZZA COSY · COSYHUB</div><h1>Inventaire & préparation</h1><div class="inv-muted">Saisie des stocks et calcul des quantités à préparer</div></div><button class="inv-btn alt" id="backBtn" aria-label="Retour à CosyHub" title="Retour à CosyHub" style="font-size:22px;padding:7px 13px">←</button></div>
+<div class="inv-head"><div><div class="inv-muted">PIZZA COSY · COSYHUB</div><h1>Inventaire & préparation</h1><div class="inv-muted">Saisie des stocks et calcul des quantités à préparer</div></div><button class="inv-btn alt" id="backBtn" aria-label="Retour à CosyHub" title="Retour à CosyHub" style="font-size:25px;padding:5px 14px;line-height:1">←</button></div>
 <div id="message" class="inv-message inv-hidden" role="status"></div>
 <div class="inv-note"><strong>Fonctionnalité en cours d’intégration.</strong> Les produits et recommandations viennent de Supabase. Les quantités ne sont enregistrées qu’au moment où vous sauvegardez l’inventaire.</div>
 <div class="inv-controls"><label>Établissement<select id="establishment"><option value="d5836f2e-d760-4470-8cb6-12c539869800">Bourgoin-Jallieu</option></select></label><label>Service<select id="service"><option value="lunch">Midi</option><option value="dinner" selected>Soir</option></select></label><label>Jour de préparation<select id="day"><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select></label><label>Date du service<input id="serviceDate" type="date"></label></div>
