@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CosyHub — Prototype inventaire & préparation</title>
+<style>
+:root{--green:#174235;--green2:#245d49;--cream:#f6f5f0;--line:#dfe5df;--muted:#69776f;--orange:#ed9b45;--white:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:#1f3029;font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:var(--green);color:#fff;padding:18px clamp(16px,4vw,42px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-weight:850;letter-spacing:.08em}.brand small{display:block;font-size:11px;letter-spacing:.02em;font-weight:500;opacity:.8}
+.pill{font-size:11px;border:1px solid #ffffff60;border-radius:4px;padding:5px 8px}
+main{max-width:1180px;margin:auto;padding:26px clamp(14px,3vw,30px) 60px}
+h1{font-size:clamp(25px,4vw,34px);line-height:1.1;margin:8px 0}.sub{color:var(--muted);margin:8px 0 22px}
+.notice{background:#fff4e6;border:1px solid #f1d2a8;padding:12px 14px;margin:0 0 20px;color:#724a19}
+.toolbar,.stats,.layout{display:grid;gap:14px}.toolbar{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:18px}
+.field{display:grid;gap:6px;font-size:12px;color:var(--muted);font-weight:700}.field input,.field select,.search{width:100%;padding:11px 12px;border:1px solid var(--line);background:white;color:#20352b;font:inherit;border-radius:4px}
+.stats{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:20px}.stat,.panel{background:white;border:1px solid var(--line);padding:16px}.stat span{display:block;color:var(--muted);font-size:12px}.stat strong{display:block;font-size:25px;margin-top:4px;color:var(--green)}
+.tabs{display:flex;gap:8px;margin:20px 0 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}.tab{padding:10px 14px;border:0;background:transparent;color:var(--muted);font:inherit;cursor:pointer;border-bottom:3px solid transparent}.tab.active{color:var(--green);font-weight:800;border-color:var(--green)}
+.layout{grid-template-columns:minmax(0,1.4fr) minmax(270px,.8fr);align-items:start}.section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.section-head h2,.panel h2{font-size:17px;margin:0}.category{border:1px solid var(--line);margin:10px 0;background:#fff}.cat-title{width:100%;display:flex;justify-content:space-between;gap:12px;padding:13px;background:#f9faf8;border:0;font-weight:800;color:var(--green);text-align:left;cursor:pointer}
+.product{display:grid;grid-template-columns:minmax(0,1fr) 90px 78px;gap:12px;align-items:center;padding:11px 12px;border-top:1px solid #edf0ec}.product small{display:block;color:var(--muted);font-size:11px}.qty{display:flex;align-items:center;gap:4px}.qty button{border:1px solid var(--line);background:white;border-radius:3px;width:26px;height:30px;font-size:17px;cursor:pointer}.qty input{width:42px;height:30px;text-align:center;border:1px solid var(--line);border-radius:3px;font:inherit}
+.btn{border:1px solid var(--green);background:var(--green);color:white;padding:11px 14px;font:inherit;font-weight:750;border-radius:3px;cursor:pointer}.btn.secondary{background:white;color:var(--green)}.btn.light{border-color:var(--line);background:#f9faf8;color:var(--green)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.summary-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:11px 0;border-bottom:1px solid #edf0ec}.summary-row small{display:block;color:var(--muted)}.summary-row strong{color:var(--green)}.empty{padding:20px;text-align:center;color:var(--muted)}.hidden{display:none!important}
+.admin-row{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #edf0ec}.admin-row input{width:100%;padding:9px;border:1px solid var(--line);font:inherit}
+footer{margin-top:20px;color:var(--muted);font-size:11px}
+@media(max-width:760px){.toolbar,.stats,.layout{grid-template-columns:1fr}.product{grid-template-columns:minmax(0,1fr) auto}.product .unit{display:none}.layout{gap:12px}.toolbar{gap:10px}.stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.stat{padding:10px}.stat strong{font-size:20px}}
+@media(max-width:420px){.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:span 2}}
+</style></head>
+<body>
+<header><div class="brand">PIZZA COSY <small>CosyHub · Inventaire & préparation</small></div><span class="pill">MAQUETTE DE TEST · données fictives</span></header>
+<main>
+<h1>Inventaire & liste préparatoire</h1><p class="sub">Comptez le stock disponible, puis générez les quantités à préparer pour le prochain service.</p>
+<div class="notice"><strong>Prototype indépendant de Supabase.</strong> Les données sont fictives et sauvegardées uniquement dans ce navigateur. Rien n'est envoyé aux équipes.</div>
+<div class="toolbar">
+<label class="field">Établissement<select id="shop"><option>Pizza Cosy Bourgoin-Jallieu</option><option>Pizza Cosy Voiron</option><option>Pizza Cosy Romans-sur-Isère</option></select></label>
+<label class="field">Service<select id="service"><option>Service du soir</option><option>Service du midi</option></select></label>
+<label class="field">Date du service<input id="date" type="date"></label>
+</div>
+<div class="stats"><div class="stat"><span>Références comptées</span><strong id="counted">0 / 12</strong></div><div class="stat"><span>À préparer</span><strong id="prepCount">—</strong></div><div class="stat"><span>Articles en rupture</span><strong id="shortages">—</strong></div></div>
+<div class="tabs"><button class="tab active" data-tab="inventory">1. Inventaire</button><button class="tab" data-tab="prep">2. Liste préparatoire</button><button class="tab" data-tab="settings">3. Quantités recommandées</button></div>
+<div id="inventoryView" class="layout">
+<section><div class="section-head"><h2>Stock disponible</h2><input id="search" class="search" style="max-width:220px" placeholder="Rechercher un produit…"></div><div id="products"></div><div class="actions"><button class="btn" id="generate">Valider l'inventaire</button><button class="btn secondary" id="reset">Réinitialiser les quantités</button></div></section>
+<aside class="panel"><h2>Avancement</h2><p class="sub" style="margin-bottom:8px">Saisissez la quantité réellement disponible pour chaque référence.</p><div id="progress"></div><hr style="border:0;border-top:1px solid var(--line);margin:16px 0"><div class="summary-row"><span>Service sélectionné</span><strong id="serviceLabel">Soir</strong></div><div class="summary-row"><span>Établissement</span><strong id="shopShort">Bourgoin</strong></div><p style="font-size:12px;color:var(--muted)">La quantité à préparer est calculée ainsi : recommandé − stock disponible, avec un minimum de zéro.</p></aside>
+</div>
+<div id="prepView" class="layout hidden"><section class="panel"><div class="section-head"><h2>Liste préparatoire</h2><button class="btn secondary" id="print">Imprimer / PDF</button></div><p id="prepMeta" class="sub"></p><div id="prepList"></div><div class="actions"><button class="btn" id="backInventory">Modifier l'inventaire</button><button class="btn secondary" id="export">Exporter en CSV</button></div></section><aside class="panel"><h2>Résumé de préparation</h2><div id="prepSummary"></div><footer>Cette liste est calculée localement à partir des recommandations de démonstration.</footer></aside></div>
+<div id="settingsView" class="hidden"><section class="panel"><div class="section-head"><div><h2>Quantités recommandées par service</h2><p class="sub" style="margin-bottom:0">Modifiez les objectifs théoriques pour la maquette. Les valeurs restent locales.</p></div></div><div id="settingsList"></div><div class="actions"><button class="btn" id="saveSettings">Enregistrer les recommandations</button><button class="btn secondary" id="resetSettings">Valeurs de démonstration</button></div></section></div>
+<footer>Préparation technique : interface seule, sans connexion à la base, sans envoi automatique Make et sans modification du fonctionnement actuel de CosyHub.</footer>
+</main>
+<script>
+const seed=[
+{id:1,name:"Mozzarella",cat:"Produits frais",unit:"kg",stock:2,reco:5},
+{id:2,name:"Jambon",cat:"Produits frais",unit:"kg",stock:1,reco:3},
+{id:3,name:"Champignons",cat:"Produits frais",unit:"kg",stock:0.5,reco:2},
+{id:4,name:"Crème",cat:"Produits frais",unit:"L",stock:1,reco:3},
+{id:5,name:"Salade",cat:"Fruits & légumes",unit:"pièces",stock:4,reco:10},
+{id:6,name:"Tomates cerises",cat:"Fruits & légumes",unit:"kg",stock:0.4,reco:2},
+{id:7,name:"Oignons",cat:"Fruits & légumes",unit:"kg",stock:1,reco:2},
+{id:8,name:"Pâte à pizza",cat:"Production",unit:"pâtons",stock:18,reco:40},
+{id:9,name:"Boulettes",cat:"Production",unit:"portions",stock:6,reco:18},
+{id:10,name:"Sauce tomate",cat:"Production",unit:"L",stock:2,reco:5},
+{id:11,name:"Boîtes petites",cat:"Emballages",unit:"pièces",stock:12,reco:30},
+{id:12,name:"Boîtes grandes",cat:"Emballages",unit:"pièces",stock:8,reco:25}];
+let products=JSON.parse(localStorage.getItem("cosyhub-demo-products")||"null")||structuredClone(seed);
+let recos=JSON.parse(localStorage.getItem("cosyhub-demo-recos")||"null")||Object.fromEntries(seed.map(p=>[p.id,p.reco]));
+let validated=false;
+const $=id=>document.getElementById(id);
+$("date").value=new Date().toLocaleDateString("en-CA");
+function persist(){localStorage.setItem("cosyhub-demo-products",JSON.stringify(products));localStorage.setItem("cosyhub-demo-recos",JSON.stringify(recos))}
+function qty(v){return Number.isFinite(+v)?Math.max(0,+v):0}
+function amount(v){return Number(v).toLocaleString("fr-FR",{maximumFractionDigits:2})}
+function prep(p){return Math.max(0,qty(recos[p.id])-(p.stock===null?0:qty(p.stock)))}
+function renderProducts(){
+ const q=$("search").value.trim().toLocaleLowerCase("fr-FR"), groups={};
+ products.filter(p=>p.name.toLocaleLowerCase("fr-FR").includes(q)||p.cat.toLocaleLowerCase("fr-FR").includes(q)).forEach(p=>(groups[p.cat]??=[]).push(p));
+ $("products").innerHTML=Object.entries(groups).map(([cat,items])=>'<div class="category"><button class="cat-title" data-cat="'+cat+'"><span>'+cat+'</span><span>'+items.length+' références　⌄</span></button><div>'+items.map(p=>'<div class="product"><div><strong>'+p.name+'</strong><small>Recommandé : '+amount(recos[p.id])+' '+p.unit+'</small></div><div class="qty"><button data-step="-1" data-id="'+p.id+'">−</button><input aria-label="Stock '+p.name+'" data-stock="'+p.id+'" value="'+(p.stock===null?"":p.stock)+'" inputmode="decimal"><button data-step="1" data-id="'+p.id+'">+</button></div><small class="unit">'+p.unit+'</small></div>').join("")+'</div></div>').join("")||'<div class="empty">Aucun produit trouvé.</div>';
+ $("products").querySelectorAll("[data-step]").forEach(b=>b.onclick=()=>{let p=products.find(x=>x.id===+b.dataset.id);p.stock=qty(p.stock)+ +b.dataset.step;persist();render()});
+ $("products").querySelectorAll("[data-stock]").forEach(i=>i.onchange=()=>{let p=products.find(x=>x.id===+i.dataset.stock);p.stock=i.value.trim()===""?null:qty(i.value);persist();render()});
+ $("products").querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{const body=b.nextElementSibling;body.classList.toggle("hidden")});
+}
+function renderSettings(){$("settingsList").innerHTML=products.map(p=>'<div class="admin-row"><div><strong>'+p.name+'</strong><small style="display:block;color:var(--muted)">'+p.cat+' · '+p.unit+'</small></div><label><span style="display:block;font-size:11px;color:var(--muted)">Recommandé</span><input type="number" min="0" step="0.1" data-reco="'+p.id+'" value="'+qty(recos[p.id])+'"></label></div>').join("")}
+function renderPrep(){
+ const items=products.map(p=>({...p,toMake:prep(p)})).filter(p=>p.toMake>0);
+ $("prepMeta").textContent=$("shop").value+" · "+$("service").value+" · "+new Date($("date").value+"T12:00:00").toLocaleDateString("fr-FR");
+ $("prepList").innerHTML=items.map(p=>'<div class="summary-row"><span><strong>'+p.name+'</strong><small>'+p.cat+' · stock '+amount(p.stock??0)+' '+p.unit+' / objectif '+amount(recos[p.id])+'</small></span><strong>'+amount(p.toMake)+' '+p.unit+'</strong></div>').join("")||'<div class="empty">Aucune préparation nécessaire avec les valeurs saisies.</div>';
+ $("prepSummary").innerHTML='<div class="summary-row"><span>Références à préparer</span><strong>'+items.length+'</strong></div><div class="summary-row"><span>Ruptures (stock nul)</span><strong>'+products.filter(p=>qty(p.stock)===0&&qty(recos[p.id])>0).length+'</strong></div><div class="summary-row"><span>Références en inventaire</span><strong>'+products.filter(p=>p.stock!==null).length+' / '+products.length+'</strong></div>';
+}
+function render(){
+ renderProducts();renderPrep();renderSettings();
+ const known=products.filter(p=>p.stock!==null).length, todo=products.filter(p=>prep(p)>0).length;
+ $("counted").textContent=known+" / "+products.length;$("prepCount").textContent=todo;$("shortages").textContent=products.filter(p=>qty(p.stock)===0&&qty(recos[p.id])>0).length;
+ $("progress").innerHTML='<div style="height:8px;background:#edf0ec;margin:12px 0"><div style="height:8px;background:var(--green);width:'+(known/products.length*100)+'%"></div></div><strong>'+Math.round(known/products.length*100)+' %</strong><p class="sub">'+known+' références renseignées sur '+products.length+'</p>';
+ $("serviceLabel").textContent=$("service").value.replace("Service du ","");$("shopShort").textContent=$("shop").selectedOptions[0].text.replace("Pizza Cosy ","");
+}
+function showTab(tab){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));["inventory","prep","settings"].forEach(v=>$(v+"View").classList.toggle("hidden",v!==tab));if(tab==="prep")renderPrep()}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+$("search").oninput=renderProducts;$("shop").onchange=render;$("service").onchange=render;$("date").onchange=render;
+$("generate").onclick=()=>{validated=true;persist();showTab("prep")};
+$("backInventory").onclick=()=>showTab("inventory");
+$("reset").onclick=()=>{if(confirm("Réinitialiser les stocks de démonstration ?")){products=structuredClone(seed);persist();render()}};
+$("saveSettings").onclick=()=>{document.querySelectorAll("[data-reco]").forEach(i=>recos[i.dataset.reco]=qty(i.value));persist();render();alert("Recommandations enregistrées dans ce navigateur.")};
+$("resetSettings").onclick=()=>{recos=Object.fromEntries(seed.map(p=>[p.id,p.reco]));persist();render()};
+$("print").onclick=()=>window.print();
+$("export").onclick=()=>{const rows=[["Produit","Catégorie","Stock","Objectif","À préparer","Unité"],...products.filter(p=>prep(p)>0).map(p=>[p.name,p.cat,p.stock??0,recos[p.id],prep(p),p.unit])];const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(";")).join("\r\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}));a.download="liste-preparatoire-cosyhub.csv";a.click();URL.revokeObjectURL(a.href)};
+render();
+</script></body></html>
