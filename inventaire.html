@@ -48,7 +48,7 @@ async function load(){
  const {data:{session},error:authErr}=await client.auth.getSession();if(authErr)throw authErr;if(!session){msg('Connectez-vous à CosyHub dans un autre onglet, puis rechargez cette page.',true);return}
  user=session.user;
  const p=await client.from('profiles').select('id,role,establishment_id').eq('id',user.id).maybeSingle();if(p.error)throw p.error;
- let e=await client.from('establishments').select('id,name,code').eq('is_active',true).order('name');if(e.error)throw e.error;establishments=e.data||[];
+ let e=await client.from('establishments').select('id,name,code').eq('is_active',true).eq('id','d5836f2e-d760-4470-8cb6-12c539869800').order('name');if(e.error)throw e.error;establishments=e.data||[];
  if(p.data?.role!=='admin'){const memberships=await client.from('user_establishments').select('establishment_id').eq('user_id',user.id);if(memberships.error)throw memberships.error;const allowed=new Set([p.data?.establishment_id,...(memberships.data||[]).map(x=>x.establishment_id)].filter(Boolean));establishments=establishments.filter(x=>allowed.has(x.id));}
  if(!establishments.length)throw Error('Aucun établissement autorisé pour ce compte.');
  $('establishment').innerHTML=establishments.map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join('');
