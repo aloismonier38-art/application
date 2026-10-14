@@ -48,7 +48,7 @@ async function load(){
  user=session.user;
  const p=await client.from('profiles').select('id,role,establishment_id').eq('id',user.id).maybeSingle();if(p.error)throw p.error;
  establishments=[{id:'d5836f2e-d760-4470-8cb6-12c539869800',name:'Bourgoin-Jallieu',code:'BOURGOIN'}];
- if(p.data?.role!=='admin'&&p.data?.establishment_id&&p.data.establishment_id!=='d5836f2e-d760-4470-0cb6-12c539869800'){const memberships=await client.from('user_establishments').select('establishment_id').eq('user_id',user.id).eq('establishment_id','d5836f2e-d760-4470-8cb6-12c539869800');if(memberships.error)throw memberships.error;if(p.data.establishment_id!=='d5836f2e-d760-4470-8cb6-12c539869800'&&!(memberships.data||[]).length)throw Error('Accès Bourgoin-Jallieu non attribué à ce compte.');}
+ if(p.data?.role!=='admin'&&p.data?.establishment_id!=='d5836f2e-d760-4470-8cb6-12c539869800'){const memberships=await client.from('user_establishments').select('establishment_id').eq('user_id',user.id).eq('establishment_id','d5836f2e-d760-4470-8cb6-12c539869800');if(memberships.error)throw memberships.error;if(!(memberships.data||[]).length)throw Error('Accès Bourgoin-Jallieu non attribué à ce compte.');}
  $('establishment').value='d5836f2e-d760-4470-8cb6-12c539869800';
  await loadData();
 }
