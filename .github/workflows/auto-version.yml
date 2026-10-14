@@ -7,6 +7,11 @@ on:
 permissions:
   contents: write
 
+# Évite que plusieurs incréments de version poussent en même temps sur main.
+concurrency:
+  group: auto-version-pizza-cosy-main
+  cancel-in-progress: false
+
 jobs:
   bump-version:
     if: ${{ github.actor != 'github-actions[bot]' }}
@@ -15,7 +20,7 @@ jobs:
       - name: Récupérer le dépôt
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Incrémenter la version
         shell: python
@@ -29,7 +34,7 @@ jobs:
           app_text = app.read_text(encoding="utf-8")
           index_text = index.read_text(encoding="utf-8")
 
-          match = re.search(r'const APP_VERSION="(\d+)\.(\d+)\.(\d+)"', app_text)
+          match = re.search(r'const APP_VERSION="(\\d+)\\.(\\d+)\\.(\\d+)"', app_text)
           if not match:
               raise SystemExit("APP_VERSION introuvable dans app.js")
 
@@ -38,36 +43,19 @@ jobs:
           new_patch = str(patch + 1)
 
           app_text = re.sub(
-              r'const APP_VERSION="\d+\.\d+\.\d+"',
+              r'const APP_VERSION="\\d+\\.\\d+\\.\\d+"',
               f'const APP_VERSION="{new_version}"',
               app_text,
               count=1
           )
 
-          index_text = re.sub(
-              r'1\.1\.\d+',
-              new_version,
-              index_text
-          )
-          index_text = re.sub(
-              r'(app\.js\?v=)\d+',
-              rf'\g<1>{new_patch}',
-              index_text
-          )
-          index_text = re.sub(
-              r'(styles\.css\?v=)\d+',
-              rf'\g<1>{new_patch}',
-              index_text
-          )
-          index_text = re.sub(
-              r'(supabase-config\.js\?v=)\d+',
-              rf'\g<1>{new_patch}',
-              index_text
-          )
+          index_text = re.sub(r'1\\.1\\.\\d+', new_version, index_text)
+          index_text = re.sub(r'(app\\.js\\?v=)\\d+', rf'\\g<1>{new_patch}', index_text)
+          index_text = re.sub(r'(styles\\.css\\?v=)\\d+', rf'\\g<1>{new_patch}', index_text)
+          index_text = re.sub(r'(supabase-config\\.js\\?v=)\\d+', rf'\\g<1>{new_patch}', index_text)
 
           app.write_text(app_text, encoding="utf-8")
           index.write_text(index_text, encoding="utf-8")
-
           print(f"Version automatique : {new_version}")
 
       - name: Publier la nouvelle version
@@ -77,4 +65,14 @@ jobs:
           git add app.js index.html
           git diff --cached --quiet && exit 0
           git commit -m "chore: version automatique"
-          git push
+          # Une mise à jour peut arriver entre checkout et push : rebase puis nouvel essai.
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Impossible de publier la version après 3 tentatives." >&2
+          exit 1
