@@ -59,7 +59,7 @@ async function loadData(){
  const est=selectedEst(),day=$('day').value;
  const [p,r]=await Promise.all([
  client.from('inventory_products').select('id,name,category,unit,sort_order').eq('is_active',true).order('sort_order').order('name'),
- client.from('prep_recommendations').select('product_id,recommended_quantity').eq('establishment_id',est).eq('service',$('service').value)
+ client.from('prep_day_recommendations').select('product_id,recommended_quantity').eq('establishment_id',est).eq('prep_day',day)
  ]);
  if(p.error)throw p.error;if(r.error)throw r.error;
  products=p.data||[];recos=Object.fromEntries((r.data||[]).map(x=>[x.product_id,Number(x.recommended_quantity)]));
